@@ -1,5 +1,6 @@
 services:
   lan-control-plane-agent:
+    image: lan-control-plane-agent:local
     build:
       context: ..
       dockerfile: agent/Dockerfile
@@ -7,4 +8,4 @@ services:
     restart: unless-stopped
     env_file:
       - ./.env
-    working_dir: /app #uv lock command in root
+    working_dir: /app/agent

@@ -14,21 +14,20 @@ COPY agent/pyproject.toml /app/agent/pyproject.toml
 COPY agent/uv.lock /app/agent/uv.lock
 COPY agent/src /app/agent/src
 
-RUN uv venv /app/.venv && \
-    . /app/.venv/bin/activate && \
-    cd /app/agent && \
-    uv sync --frozen --no-dev
+WORKDIR /app/agent
+
+RUN uv sync --frozen --no-dev
 
 FROM python:3.12-slim AS runner
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-ENV PATH="/app/.venv/bin:$PATH"
+ENV PATH="/app/agent/.venv/bin:$PATH"
 
-WORKDIR /app
+WORKDIR /app/agent
 
-COPY --from=builder /app/.venv /app/.venv
-COPY shared/src /app/shared/src
-COPY agent/src /app/agent/src
+COPY --from=builder /app/agent/.venv /app/agent/.venv
+COPY --from=builder /app/agent/src /app/agent/src
+COPY --from=builder /app/shared/src /app/shared/src
 
 CMD ["python", "-m", "lan_control_plane_agent.main"]
