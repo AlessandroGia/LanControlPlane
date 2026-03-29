@@ -61,14 +61,19 @@ export function DashboardClient({
         refreshInFlightRef.current = true;
 
         try {
-            const [updatedHosts, updatedJobs, updatedAgents, updatedAuditLogs, updatedLatestMetrics] =
-                await Promise.all([
-                    getHosts(),
-                    getJobs(),
-                    getAgents(),
-                    getAuditLogs(),
-                    getLatestMetrics(),
-                ]);
+            const [
+                updatedHosts,
+                updatedJobs,
+                updatedAgents,
+                updatedAuditLogs,
+                updatedLatestMetrics,
+            ] = await Promise.all([
+                getHosts(),
+                getJobs(),
+                getAgents(),
+                getAuditLogs(),
+                getLatestMetrics(),
+            ]);
 
             setHosts(updatedHosts);
             setJobs(updatedJobs);
@@ -95,36 +100,11 @@ export function DashboardClient({
             }
 
             if (event.type === "hosts_snapshot") {
-                setHosts((currentHosts) =>
-                    currentHosts.map((host) => {
-                        const snapshotItem = event.hosts.find((item) => item.name === host.name);
-                        if (!snapshotItem) {
-                            return host;
-                        }
-
-                        return {
-                            ...host,
-                            state: snapshotItem.state,
-                        };
-                    }),
-                );
-
                 void refreshData();
                 return;
             }
 
             if (event.type === "host_status_changed") {
-                setHosts((currentHosts) =>
-                    currentHosts.map((host) =>
-                        host.name === event.host_id
-                            ? {
-                                ...host,
-                                state: event.state,
-                            }
-                            : host,
-                    ),
-                );
-
                 if (
                     event.state === "waking" ||
                     event.state === "shutting_down" ||
@@ -227,4 +207,3 @@ export function DashboardClient({
         </div>
     );
 }
-
