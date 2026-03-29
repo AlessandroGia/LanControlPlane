@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+
+jobs:
+  quality-and-tests:
+    name: Quality and tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Sync dependencies
+        run: uv sync --all-groups
+
+      - name: Ruff lint
+        run: uv run ruff check .
+
+      - name: Ruff format check
+        run: uv run ruff format --check .
+
+      - name: Mypy
+        run: uv run mypy server/src agent/src shared/src
+
+      - name: Run tests
+        run: uv run pytest -q
+
+  alembic:
+    name: Alembic migration check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Sync dependencies
+        run: uv sync --all-groups
+
+      - name: Prepare env file
+        run: |
+          cat > .env <<'EOF'
+          APP_ENV=ci
+          SERVER_HOST=0.0.0.0
+          SERVER_PORT=8000
+          DATABASE_URL=sqlite:///./ci.db
+          SECRET_KEY=ci-secret-key
+          ACCESS_TOKEN_EXPIRE_MINUTES=60
+          WS_HEARTBEAT_INTERVAL=15
+          REST_API_KEY=dev-rest-api-key
+          CLIENT_TOKEN=dev-client-token
+          AGENT_ID=desktop-casa
+          AGENT_TOKEN=change-me-agent-token
+          SERVER_WS_AGENT_URL=ws://localhost:8000/ws/agent
+          SERVER_WS_CLIENT_URL=ws://localhost:8000/ws/client
+          DRY_RUN=true
+          EOF
+
+      - name: Run Alembic upgrade
+        run: uv run alembic upgrade head
+
+  docker-build:
+    name: Docker build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build server image
+        run: docker build -f server/Dockerfile -t lan-control-plane-server .
+
+      - name: Build agent image
+        run: docker build -f agent/Dockerfile -t lan-control-plane-agent .

@@ -1,0 +1,15 @@
+services:
+
+  create-admin:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    env_file:
+      - env/server.env
+    working_dir: /app
+    volumes:
+      - data:/app/data
+      - scripts:/app/scripts
+    command: uv run python /app/scripts/create_admin.py
+    profiles:
+      - tools

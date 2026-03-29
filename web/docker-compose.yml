@@ -1,0 +1,27 @@
+services:
+  lan-control-plane-web:
+    build:
+      context: ..
+      dockerfile: web/Dockerfile
+      args:
+        NEXT_PUBLIC_CLIENT_TOKEN: ${NEXT_PUBLIC_CLIENT_TOKEN}
+        NEXT_PUBLIC_REST_API_KEY: ${NEXT_PUBLIC_REST_API_KEY}
+        INTERNAL_API_BASE_URL: ${INTERNAL_API_BASE_URL}
+    container_name: lan-control-plane-web
+
+    restart: unless-stopped
+    env_file:
+      - ../env/web.env
+    working_dir: /app
+    volumes:
+      - ../web/.env.production:/app/.env.production:ro
+    command: npm run start
+    networks:
+      - public-net
+      - private-net
+
+networks:
+  public-net:
+    external: true
+  private-net:
+    external: true

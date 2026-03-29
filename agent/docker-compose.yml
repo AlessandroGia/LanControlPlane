@@ -1,0 +1,12 @@
+services:
+  lan-control-plane-agent:
+    build:
+      context: ..
+      dockerfile: agent/Dockerfile
+    container_name: lan-control-plane-agent
+    restart: unless-stopped
+    env_file:
+      - ../env/agent.env
+    working_dir: /app
+    command: >
+      uv run python -m lan_control_plane_agent.main
