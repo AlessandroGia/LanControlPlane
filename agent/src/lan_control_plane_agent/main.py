@@ -3,6 +3,7 @@ import json
 import logging
 
 import websockets
+import socket
 
 from lan_control_plane_agent.core.config import get_settings
 from lan_control_plane_agent.core.logging import configure_logging
