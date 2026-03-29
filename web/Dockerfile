@@ -15,12 +15,11 @@ COPY web/package.json ./
 COPY web/package-lock.json ./
 COPY web/tsconfig.json ./
 COPY web/next.config.ts ./
+COPY web/.env.production ./.env.production
 COPY web/app ./app
 COPY web/components ./components
 COPY web/lib ./lib
 COPY web/public ./public
-COPY web/app/manifest.ts ./
-COPY web/.env.production ./.env.production
 
 RUN npm run build
 
