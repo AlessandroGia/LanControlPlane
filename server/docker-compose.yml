@@ -1,5 +1,6 @@
 services:
   lan-control-plane-server:
+    image: lan-control-plane-server:local
     build:
       context: ..
       dockerfile: server/Dockerfile
@@ -16,6 +17,7 @@ services:
       - private-net
 
   migrate:
+    image: lan-control-plane-server:local
     build:
       context: ..
       dockerfile: server/Dockerfile
@@ -37,6 +39,7 @@ services:
       - tools
 
   create-admin:
+    image: lan-control-plane-server:local
     build:
       context: ..
       dockerfile: server/Dockerfile
@@ -56,6 +59,7 @@ services:
       - tools
 
   makemigrations:
+    image: lan-control-plane-server:local
     build:
       context: ..
       dockerfile: server/Dockerfile
