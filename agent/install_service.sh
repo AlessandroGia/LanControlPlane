@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-AGENT_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+AGENT_DIR="$SCRIPT_DIR"
 REPO_ROOT="$(cd -- "$AGENT_DIR/.." && pwd)"
 
 INSTALL_DIR="/opt/lan-control-plane-agent"
