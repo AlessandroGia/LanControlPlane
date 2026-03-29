@@ -21,7 +21,7 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(50), nullable=False, default="admin")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
     sessions: Mapped[list["Session"]] = relationship(
     back_populates="user",
     cascade="all, delete-orphan",
@@ -38,9 +38,9 @@ class Host(Base):
     mac_address: Mapped[str | None] = mapped_column(String(17), nullable=True)
     state: Mapped[str] = mapped_column(String(50), nullable=False, default="unknown")
     is_managed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
+        DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
         nullable=False,
@@ -62,7 +62,7 @@ class Agent(Base):
     token_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     version: Mapped[str] = mapped_column(String(50), nullable=False, default="0.1.0")
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     host: Mapped["Host"] = relationship(back_populates="agent")
 
@@ -75,9 +75,9 @@ class Job(Base):
     command: Mapped[str] = mapped_column(String(50), nullable=False)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
     requested_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    requested_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
-    started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     result_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     host: Mapped["Host"] = relationship(back_populates="jobs")
@@ -91,7 +91,7 @@ class HostMetric(Base):
     cpu_usage: Mapped[float] = mapped_column(nullable=False)
     memory_usage: Mapped[float] = mapped_column(nullable=False)
     uptime_seconds: Mapped[int] = mapped_column(Integer, nullable=False)
-    collected_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    collected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
 
     host: Mapped["Host"] = relationship(back_populates="metrics")
 
@@ -106,7 +106,7 @@ class AuditLog(Base):
     target_type: Mapped[str] = mapped_column(String(50), nullable=False)
     target_id: Mapped[str] = mapped_column(String(255), nullable=False)
     metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
 
 
 class Session(Base):
@@ -115,8 +115,8 @@ class Session(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
     session_token_hash: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    expires_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, nullable=False)
-    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, nullable=False)
-    last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
     user: Mapped["User"] = relationship(back_populates="sessions")

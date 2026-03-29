@@ -2,6 +2,7 @@ import { LogoutButton } from "@/components/auth/logout-button";
 import { HostDetailAutoRefresh } from "@/components/hosts/host-detail-auto-refresh";
 import { HostMetricsChart } from "@/components/hosts/host-metrics-chart";
 import { getAgents, getHost, getHostMetrics, getMe } from "@/lib/api";
+import { formatLocalDateTime } from "@/lib/time";
 import type { HostMetricRead } from "@/lib/types";
 import { cookies } from "next/headers";
 import Link from "next/link";
@@ -16,10 +17,6 @@ function buildCookieHeader(
     }
 
     return all.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
-}
-
-function formatDate(value: string): string {
-    return new Date(value).toLocaleString();
 }
 
 function formatUptime(totalSeconds: number): string {
@@ -121,7 +118,7 @@ export default async function HostDetailPage({ params }: PageProps) {
                                 </div>
                                 {agent?.last_seen_at ? (
                                     <div className="list-item-meta">
-                                        Last seen: {formatDate(agent.last_seen_at)}
+                                        Last seen: {formatLocalDateTime(agent.last_seen_at)}
                                     </div>
                                 ) : null}
                             </div>
@@ -140,7 +137,7 @@ export default async function HostDetailPage({ params }: PageProps) {
                                             Uptime: {formatUptime(latestMetric.uptime_seconds)}
                                         </div>
                                         <div className="list-item-meta">
-                                            Collected: {formatDate(latestMetric.collected_at)}
+                                            Collected: {formatLocalDateTime(latestMetric.collected_at)}
                                         </div>
                                     </>
                                 ) : (
@@ -173,7 +170,7 @@ export default async function HostDetailPage({ params }: PageProps) {
                                     .map((metric) => (
                                         <div key={metric.id} className="list-item">
                                             <div className="list-item-title">
-                                                {formatDate(metric.collected_at)}
+                                                {formatLocalDateTime(metric.collected_at)}
                                             </div>
                                             <div className="list-item-meta">
                                                 CPU: {metric.cpu_usage.toFixed(1)}% · RAM:{" "}

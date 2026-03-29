@@ -1,3 +1,4 @@
+import { formatRelativeTime, isOlderThan } from "@/lib/time";
 import type { Agent, Host, HostLatestMetric } from "@/lib/types";
 import Link from "next/link";
 
@@ -36,45 +37,6 @@ function formatUptime(totalSeconds: number): string {
   return `${minutes}m`;
 }
 
-function formatRelativeTime(value: string): string {
-  const now = Date.now();
-  const then = new Date(value).getTime();
-  const diffSeconds = Math.max(0, Math.floor((now - then) / 1000));
-
-  if (diffSeconds < 60) {
-    return `${diffSeconds}s ago`;
-  }
-
-  const diffMinutes = Math.floor(diffSeconds / 60);
-  if (diffMinutes < 60) {
-    return `${diffMinutes}m ago`;
-  }
-
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) {
-    return `${diffHours}h ago`;
-  }
-
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d ago`;
-}
-
-function isMetricStale(value: string): boolean {
-  const now = Date.now();
-  const then = new Date(value).getTime();
-  const diffSeconds = Math.max(0, Math.floor((now - then) / 1000));
-
-  return diffSeconds > 120;
-}
-
-function isAgentStale(value: string): boolean {
-  const now = Date.now();
-  const then = new Date(value).getTime();
-  const diffSeconds = Math.max(0, Math.floor((now - then) / 1000));
-
-  return diffSeconds > 60;
-}
-
 export function HostCard({
   host,
   agent,
@@ -86,8 +48,9 @@ export function HostCard({
   pendingCommand,
 }: HostCardProps) {
   const hostBusy = Boolean(pendingCommand);
-  const metricStale = latestMetric ? isMetricStale(latestMetric.collected_at) : false;
-  const agentLastSeenStale = agent?.last_seen_at ? isAgentStale(agent.last_seen_at) : true;
+
+  const metricStale = latestMetric ? isOlderThan(latestMetric.collected_at, 120) : false;
+  const agentLastSeenStale = agent?.last_seen_at ? isOlderThan(agent.last_seen_at, 60) : true;
 
   return (
     <div className="host-card">

@@ -1,3 +1,4 @@
+import { formatLocalDateTime } from "@/lib/time";
 import type { AuditLog } from "@/lib/types";
 
 type AuditPanelProps = {
@@ -23,7 +24,7 @@ export function AuditPanel({ logs }: AuditPanelProps) {
               <div className="list-item-meta">
                 {log.actor_type}:{log.actor_id} → {log.target_type}:{log.target_id}
               </div>
-              <div className="list-item-meta">{formatDate(log.created_at)}</div>
+              <div className="list-item-meta">{formatLocalDateTime(log.created_at)}</div>
             </div>
           ))}
         </div>
