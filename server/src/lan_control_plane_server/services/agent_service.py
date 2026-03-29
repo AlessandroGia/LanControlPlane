@@ -4,6 +4,7 @@ from lan_control_plane_server.db.models import Agent, Host
 from lan_control_plane_server.repositories.agent_repository import AgentRepository
 from lan_control_plane_server.repositories.host_repository import HostRepository
 from sqlalchemy.orm import Session
+from datetime import datetime, UTC
 
 
 def hash_token(token: str) -> str:
@@ -12,6 +13,7 @@ def hash_token(token: str) -> str:
 
 class AgentService:
     def __init__(self, session: Session) -> None:
+        self.session = session
         self.agent_repository = AgentRepository(session)
         self.host_repository = HostRepository(session)
 
@@ -42,14 +44,15 @@ class AgentService:
         )
 
     def touch_agent_last_seen(self, *, host: Host) -> Agent | None:
-        existing = self.agent_repository.get_by_host_id(host.id)
-        if existing is None:
+        agent = self.agent_repository.get_by_host_id(host.id)
+        if agent is None:
             return None
 
-        if not existing.enabled:
-            return None
-
-        return self.agent_repository.touch_last_seen(existing)
+        agent.last_seen_at = datetime.now(UTC)
+        self.session.add(agent)
+        self.session.commit()
+        self.session.refresh(agent)
+        return agent
 
     def get_agent_for_host(self, *, host: Host) -> Agent | None:
         return self.agent_repository.get_by_host_id(host.id)

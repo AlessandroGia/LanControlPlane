@@ -9,6 +9,11 @@ from lan_control_plane_agent.core.config import get_settings
 from lan_control_plane_agent.core.logging import configure_logging
 from lan_control_plane_agent.handlers.command_handler import handle_command
 from lan_control_plane_agent.system.network_info import get_mac_address, get_primary_ip_address
+from lan_control_plane_agent.system.metrics import (
+    get_cpu_usage,
+    get_memory_usage,
+    get_uptime_seconds,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -23,10 +28,10 @@ async def heartbeat_loop(
         heartbeat_message = {
             "type": "heartbeat",
             "agent_id": agent_id,
-            "uptime": 12345,
+            "uptime": get_uptime_seconds(),
             "metrics": {
-                "cpu": 12.5,
-                "memory": 42.0,
+                "cpu": get_cpu_usage(),
+                "memory": get_memory_usage(),
             },
         }
         await websocket.send(json.dumps(heartbeat_message))
