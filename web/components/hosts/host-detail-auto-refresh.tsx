@@ -8,7 +8,7 @@ type HostDetailAutoRefreshProps = {
 };
 
 export function HostDetailAutoRefresh({
-    intervalMs = 15000,
+    intervalMs = 10000,
 }: HostDetailAutoRefreshProps) {
     const router = useRouter();
 
