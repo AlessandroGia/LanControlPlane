@@ -13,6 +13,8 @@ COPY shared/src /app/shared/src
 COPY server/pyproject.toml /app/server/pyproject.toml
 COPY server/uv.lock /app/server/uv.lock
 COPY server/src /app/server/src
+COPY server/alembic /app/server/alembic
+COPY server/alembic.ini /app/server/alembic.ini
 
 WORKDIR /app/server
 
@@ -24,14 +26,12 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PATH="/app/server/.venv/bin:$PATH"
 
-WORKDIR /app
+WORKDIR /app/server
 
 COPY --from=builder /app/server/.venv /app/server/.venv
-COPY shared/src /app/shared/src
-COPY server/src /app/server/src
-COPY server/alembic /app/server/alembic
-COPY server/alembic.ini /app/server/alembic.ini
-
-WORKDIR /app/server
+COPY --from=builder /app/server/src /app/server/src
+COPY --from=builder /app/server/alembic /app/server/alembic
+COPY --from=builder /app/server/alembic.ini /app/server/alembic.ini
+COPY --from=builder /app/shared/src /app/shared/src
 
 CMD ["uvicorn", "lan_control_plane_server.main:app", "--host", "0.0.0.0", "--port", "8000"]
