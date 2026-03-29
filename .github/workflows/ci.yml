@@ -12,6 +12,18 @@ jobs:
     name: Quality and tests
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - shared
+          - server
+          - agent
+
+    defaults:
+      run:
+        working-directory: ${{ matrix.project }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -28,13 +40,13 @@ jobs:
         run: uv sync --all-groups
 
       - name: Ruff lint
-        run: uv run ruff check .
+        run: uv run ruff check src tests
 
       - name: Ruff format check
-        run: uv run ruff format --check .
+        run: uv run ruff format --check src tests
 
       - name: Mypy
-        run: uv run mypy server/src agent/src shared/src
+        run: uv run mypy src
 
       - name: Run tests
         run: uv run pytest -q
@@ -42,6 +54,10 @@ jobs:
   alembic:
     name: Alembic migration check
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: server
 
     steps:
       - name: Checkout repository
@@ -58,27 +74,21 @@ jobs:
       - name: Sync dependencies
         run: uv sync --all-groups
 
-      - name: Prepare env file
+      - name: Prepare server env file
         run: |
           cat > .env <<'EOF'
-          APP_ENV=ci
-          SERVER_HOST=0.0.0.0
-          SERVER_PORT=8000
-          DATABASE_URL=sqlite:///./ci.db
-          SECRET_KEY=ci-secret-key
+          DATABASE_URL=sqlite:///./data/lan_control_plane.db
+          SESSION_COOKIE_NAME=lcp_session
+          SESSION_TTL_HOURS=12
           ACCESS_TOKEN_EXPIRE_MINUTES=60
-          WS_HEARTBEAT_INTERVAL=15
-          REST_API_KEY=dev-rest-api-key
-          CLIENT_TOKEN=dev-client-token
-          AGENT_ID=desktop-casa
-          AGENT_TOKEN=change-me-agent-token
-          SERVER_WS_AGENT_URL=ws://localhost:8000/ws/agent
-          SERVER_WS_CLIENT_URL=ws://localhost:8000/ws/client
-          DRY_RUN=true
+          AGENT_SHARED_SECRET=ci-agent-secret
           EOF
 
+      - name: Prepare local sqlite path
+        run: mkdir -p data
+
       - name: Run Alembic upgrade
-        run: uv run alembic upgrade head
+        run: uv run alembic -c alembic.ini upgrade head
 
   docker-build:
     name: Docker build
@@ -93,3 +103,6 @@ jobs:
 
       - name: Build agent image
         run: docker build -f agent/Dockerfile -t lan-control-plane-agent .
+
+      - name: Build web image
+        run: docker build -f web/Dockerfile -t lan-control-plane-web .
