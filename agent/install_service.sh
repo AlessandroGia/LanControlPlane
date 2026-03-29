@@ -10,13 +10,26 @@ SERVICE_NAME="lan-control-plane-agent"
 SERVICE_FILE_SOURCE="$AGENT_DIR/packaging/linux/${SERVICE_NAME}.service"
 SERVICE_FILE_DEST="/etc/systemd/system/${SERVICE_NAME}.service"
 
+echo "==> SCRIPT_DIR=$SCRIPT_DIR"
+echo "==> AGENT_DIR=$AGENT_DIR"
+echo "==> REPO_ROOT=$REPO_ROOT"
+
+if [ ! -d "$AGENT_DIR/src" ]; then
+  echo "Agent directory not valid: $AGENT_DIR"
+  exit 1
+fi
+
+if [ ! -d "$REPO_ROOT/shared/src" ]; then
+  echo "Shared directory not found: $REPO_ROOT/shared"
+  exit 1
+fi
+
 echo "==> Creating install directory"
 sudo mkdir -p "$INSTALL_DIR"
 
 echo "==> Copying agent and shared sources"
 sudo rm -rf "$INSTALL_DIR/agent" "$INSTALL_DIR/shared"
-sudo mkdir -p "$INSTALL_DIR"
-sudo cp -r "$REPO_ROOT/agent" "$INSTALL_DIR/agent"
+sudo cp -r "$AGENT_DIR" "$INSTALL_DIR/agent"
 sudo cp -r "$REPO_ROOT/shared" "$INSTALL_DIR/shared"
 
 echo "==> Preparing agent env file"
