@@ -9,5 +9,5 @@ cd "$SERVER_DIR"
 mkdir -p data
 
 rm -f ../data/lan_control_plane.db
-docker compose -f docker-compose.yml --profile tools run --rm migrate
-docker compose -f docker-compose.yml build --no-cache
+docker compose build --no-cache
+docker compose --profile tools run --rm migrate
