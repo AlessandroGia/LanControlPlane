@@ -1,4 +1,5 @@
 import { LogoutButton } from "@/components/auth/logout-button";
+import { HostDetailAutoRefresh } from "@/components/hosts/host-detail-auto-refresh";
 import { HostMetricsChart } from "@/components/hosts/host-metrics-chart";
 import { getAgents, getHost, getHostMetrics, getMe } from "@/lib/api";
 import type { HostMetricRead } from "@/lib/types";
@@ -79,6 +80,7 @@ export default async function HostDetailPage({ params }: PageProps) {
 
     return (
         <main className="container">
+            <HostDetailAutoRefresh intervalMs={10000} />
             <div className="page-header">
                 <div>
                     <div className="page-subtitle" style={{ marginBottom: "0.5rem" }}>
