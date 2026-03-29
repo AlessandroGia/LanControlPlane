@@ -147,7 +147,6 @@ async def _handle_heartbeat(websocket: WebSocket, raw_message: dict[str, object]
 
         host = host_service.get_host_by_name(heartbeat.agent_id)
         if host is not None:
-            host_service.mark_host_online(host.name)
             agent_service.touch_agent_last_seen(host=host)
             metric_service.record_heartbeat_metrics(
                 host_id=host.id,
