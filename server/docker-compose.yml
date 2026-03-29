@@ -7,9 +7,9 @@ services:
     restart: unless-stopped
     env_file:
       - ./.env
-    working_dir: /app
+    working_dir: /app/server
     volumes:
-      - ./data:/app/data
+      - ./data:/app/server/data
     ports:
       - "8765:8000"
     networks:
@@ -22,11 +22,11 @@ services:
     container_name: lan-control-plane-migrate
     env_file:
       - ./.env
-    working_dir: /app
+    working_dir: /app/server
     volumes:
-      - ./data:/app/data
-      - ./alembic:/app/alembic
-      - ./alembic.ini:/app/alembic.ini:ro
+      - ./data:/app/server/data
+      - ./alembic:/app/server/alembic
+      - ./alembic.ini:/app/server/alembic.ini:ro
     command: >
       alembic upgrade head
     networks:
@@ -41,12 +41,12 @@ services:
     container_name: lan-control-plane-create-admin
     env_file:
       - ./.env
-    working_dir: /app
+    working_dir: /app/server
     volumes:
-      - ./data:/app/data
-      - ./scripts:/app/scripts
+      - ./data:/app/server/data
+      - ./scripts:/app/server/scripts
     command: >
-      python /app/scripts/create_admin.py
+      python /app/server/scripts/create_admin.py
     networks:
       - private-net
     profiles:
@@ -59,13 +59,13 @@ services:
     container_name: lan-control-plane-makemigrations
     env_file:
       - ./.env
-    working_dir: /app
+    working_dir: /app/server
     volumes:
-      - ./data:/app/data
-      - ./server/src:/app/server/src
-      - ./shared/src:/app/shared/src
-      - ./alembic:/app/alembic
-      - ./alembic.ini:/app/alembic.ini:ro
+      - ./data:/app/server/data
+      - ./src:/app/server/src
+      - ../shared/src:/app/shared/src
+      - ./alembic:/app/server/alembic
+      - ./alembic.ini:/app/server/alembic.ini:ro
     command: >
       alembic revision --autogenerate -m "update schema"
     networks:
