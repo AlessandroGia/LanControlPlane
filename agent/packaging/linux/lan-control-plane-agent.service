@@ -1,0 +1,17 @@
+[Unit]
+Description=LAN Control Plane Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/lan-control-plane-agent/agent
+EnvironmentFile=/opt/lan-control-plane-agent/agent.env
+ExecStart=/opt/lan-control-plane-agent/.venv/bin/python -m lan_control_plane_agent.main
+Restart=always
+RestartSec=5
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target
