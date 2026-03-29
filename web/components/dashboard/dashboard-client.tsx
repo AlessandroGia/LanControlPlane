@@ -82,16 +82,6 @@ export function DashboardClient({
         }
     }, []);
 
-    useEffect(() => {
-        const intervalId = window.setInterval(() => {
-            void refreshData();
-        }, 15000);
-
-        return () => {
-            window.clearInterval(intervalId);
-        };
-    }, [refreshData]);
-
     const handleWsEvent = useCallback(
         (event: WsServerEvent): void => {
             if (event.type === "connected") {

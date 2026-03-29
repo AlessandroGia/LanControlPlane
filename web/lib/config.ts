@@ -11,8 +11,14 @@ function getBrowserWsUrl(): string {
 }
 
 export const config = {
-  apiBaseUrl: "/api",
   internalApiBaseUrl,
+  getApiBaseUrl(): string {
+    if (typeof window === "undefined") {
+      return internalApiBaseUrl;
+    }
+
+    return "";
+  },
   getWsClientUrl(): string {
     return getBrowserWsUrl();
   },
