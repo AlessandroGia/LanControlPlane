@@ -6,12 +6,10 @@ services:
     container_name: lan-control-plane-server
     restart: unless-stopped
     env_file:
-      - ../env/server.env
+      - ./.env
     working_dir: /app
     volumes:
-      - ../data:/app/data
-    command: >
-      uv run uvicorn lan_control_plane_server.main:app --host 0.0.0.0 --port 8000
+      - ./data:/app/data
     ports:
       - "8765:8000"
     networks:
@@ -23,14 +21,14 @@ services:
       dockerfile: server/Dockerfile
     container_name: lan-control-plane-migrate
     env_file:
-      - ../env/server.env
+      - ./.env
     working_dir: /app
     volumes:
-      - ../data:/app/data
-      - ../alembic:/app/alembic
-      - ../alembic.ini:/app/alembic.ini
+      - ./data:/app/data
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini:ro
     command: >
-      uv run alembic upgrade head
+      alembic upgrade head
     networks:
       - private-net
     profiles:
@@ -42,17 +40,13 @@ services:
       dockerfile: server/Dockerfile
     container_name: lan-control-plane-create-admin
     env_file:
-      - ../env/server.env
+      - ./.env
     working_dir: /app
     volumes:
-      - ../data:/app/data
-      - ../scripts:/app/scripts
-      - ../server/src:/app/server/src
-      - ../shared/src:/app/shared/src
-      - ../alembic:/app/alembic
-      - ../alembic.ini:/app/alembic.ini:ro
+      - ./data:/app/data
+      - ./scripts:/app/scripts
     command: >
-      uv run python /app/scripts/create_admin.py
+      python /app/scripts/create_admin.py
     networks:
       - private-net
     profiles:
@@ -64,82 +58,18 @@ services:
       dockerfile: server/Dockerfile
     container_name: lan-control-plane-makemigrations
     env_file:
-      - ../env/server.env
+      - ./.env
     working_dir: /app
     volumes:
-      - ../data:/app/data
-      - ../server/src:/app/server/src
-      - ../shared/src:/app/shared/src
-      - ../alembic:/app/alembic
-      - ../alembic.ini:/app/alembic.ini:ro
+      - ./data:/app/data
+      - ./server/src:/app/server/src
+      - ./shared/src:/app/shared/src
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini:ro
     command: >
-      uv run alembic revision --autogenerate -m "add sessions table"
+      alembic revision --autogenerate -m "update schema"
     networks:
       - private-net
-    profiles:
-      - tools
-
-  format:
-    build:
-      context: ..
-      dockerfile: server/Dockerfile
-    container_name: lan-control-plane-format
-    env_file:
-      - ../env/server.env
-    working_dir: /app
-    volumes:
-      - ../server/src:/app/server/src
-      - ../agent/src:/app/agent/src
-      - ../shared/src:/app/shared/src
-      - ../scripts:/app/scripts
-      - ../pyproject.toml:/app/pyproject.toml:ro
-      - ../uv.lock:/app/uv.lock:ro
-    command: >
-      sh -c "uv run ruff format server/src agent/src shared/src scripts &&
-             uv run ruff check --fix server/src agent/src shared/src scripts"
-    profiles:
-      - tools
-
-  typecheck:
-    build:
-      context: ..
-      dockerfile: server/Dockerfile
-    container_name: lan-control-plane-typecheck
-    env_file:
-      - ../env/server.env
-    working_dir: /app
-    volumes:
-      - ../scripts:/app/scripts
-      - ../server/src:/app/server/src
-      - ../agent/src:/app/agent/src
-      - ../shared/src:/app/shared/src
-      - ../pyproject.toml:/app/pyproject.toml:ro
-      - ../uv.lock:/app/uv.lock:ro
-    command: >
-      uv run mypy server/src agent/src shared/src
-    networks:
-      - private-net
-    profiles:
-      - tools
-
-  lint:
-    build:
-      context: ..
-      dockerfile: server/Dockerfile
-    container_name: lan-control-plane-lint
-    env_file:
-      - ../env/server.env
-    working_dir: /app
-    volumes:
-      - ../scripts:/app/scripts
-      - ../server/src:/app/server/src
-      - ../agent/src:/app/agent/src
-      - ../shared/src:/app/shared/src
-      - ../pyproject.toml:/app/pyproject.toml:ro
-      - ../uv.lock:/app/uv.lock:ro
-    command: >
-      sh -c "uv run ruff check server/src agent/src shared/src scripts &&
-             uv run ruff format --check server/src agent/src shared/src scripts"
     profiles:
       - tools
 

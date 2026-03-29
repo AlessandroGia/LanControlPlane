@@ -8,7 +8,7 @@ if [[ ! -f "$SECRET_FILE" ]]; then
   exit 1
 fi
 
-docker compose -f server/docker-compose.yml --profile tools run --rm \
+docker compose -f docker-compose.yml --profile tools run --rm \
   -e LCP_ADMIN_PASSWORD_FILE=/run/secrets/admin_password.txt \
   -v "$(pwd)/${SECRET_FILE#./}:/run/secrets/admin_password.txt:ro" \
   create-admin

@@ -29,6 +29,9 @@ node_modules/
 web/node_modules/
 **/node_modules/
 .next/
+server/.env
+agent/.env
+web/.env.production
 
 
 # PyInstaller

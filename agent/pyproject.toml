@@ -1,0 +1,71 @@
+[project]
+name = "lan-control-plane-agent"
+version = "0.1.0"
+description = "Agent for LAN Control Plane"
+requires-python = ">=3.12"
+dependencies = [
+  "pydantic>=2.8.0",
+  "pydantic-settings>=2.4.0",
+  "python-dotenv>=1.0.1",
+  "websockets>=13.0",
+  "psutil>=7.2.2",
+  "lan-control-plane-shared",
+]
+
+[tool.uv.sources]
+lan-control-plane-shared = { path = "../shared" }
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3.0",
+  "pytest-asyncio>=0.24.0",
+  "mypy>=1.11.0",
+  "ruff>=0.6.0",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "src",
+  "../shared/src",
+]
+testpaths = [
+  "tests",
+]
+asyncio_mode = "auto"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_configs = true
+mypy_path = [
+  "src",
+  "../shared/src",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+  "src/lan_control_plane_agent",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "src/lan_control_plane_agent",
+  "tests",
+  "../shared/src/lan_control_plane_shared",
+  "pyproject.toml",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
