@@ -27,8 +27,10 @@ services:
       - ./data:/app/server/data
       - ./alembic:/app/server/alembic
       - ./alembic.ini:/app/server/alembic.ini:ro
-    command: >
-      alembic upgrade head
+    command:
+      - /app/server/.venv/bin/alembic
+      - upgrade
+      - head
     networks:
       - private-net
     profiles:
@@ -45,8 +47,9 @@ services:
     volumes:
       - ./data:/app/server/data
       - ./scripts:/app/server/scripts
-    command: >
-      python /app/server/scripts/create_admin.py
+    command:
+      - /app/server/.venv/bin/python
+      - /app/server/scripts/create_admin.py
     networks:
       - private-net
     profiles:
@@ -66,8 +69,12 @@ services:
       - ../shared/src:/app/shared/src
       - ./alembic:/app/server/alembic
       - ./alembic.ini:/app/server/alembic.ini:ro
-    command: >
-      alembic revision --autogenerate -m "update schema"
+    command:
+      - /app/server/.venv/bin/alembic
+      - revision
+      - --autogenerate
+      - -m
+      - update schema
     networks:
       - private-net
     profiles:
