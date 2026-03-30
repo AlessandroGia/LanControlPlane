@@ -39,20 +39,24 @@ export function HostCardSortable({
     });
 
     const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
+        transform: CSS.Transform.toString(
+            transform
+                ? {
+                    ...transform,
+                    scaleX: isDragging ? 1.01 : 1,
+                    scaleY: isDragging ? 1.01 : 1,
+                }
+                : null,
+        ),
+        transition: transition ?? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)",
     };
 
     return (
         <div
             ref={setNodeRef}
             style={style}
-            className={isDragging ? "host-card-sortable dragging" : "host-card-sortable"}
+            className={`host-card-sortable${isDragging ? " dragging" : ""}`}
         >
-            <div className="host-card-drag-handle" {...attributes} {...listeners} aria-label={`Drag ${host.name}`}>
-                ⋮⋮
-            </div>
-
             <HostCard
                 host={host}
                 agent={agent}
@@ -62,6 +66,10 @@ export function HostCardSortable({
                 onReboot={onReboot}
                 actionsDisabled={actionsDisabled}
                 pendingCommand={pendingCommand}
+                dragHandleProps={{
+                    attributes,
+                    listeners,
+                }}
             />
         </div>
     );

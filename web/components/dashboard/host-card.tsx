@@ -14,6 +14,10 @@ type HostCardProps = {
   onReboot?: (hostName: string) => void;
   actionsDisabled?: boolean;
   pendingCommand?: "wake" | "shutdown" | "reboot";
+  dragHandleProps?: {
+    attributes: Record<string, unknown>;
+    listeners: Record<string, unknown>;
+  };
 };
 
 const stateLabelMap: Record<Host["state"], string> = {
@@ -64,6 +68,7 @@ export function HostCard({
   onReboot,
   actionsDisabled = false,
   pendingCommand,
+  dragHandleProps,
 }: HostCardProps) {
   const hydrated = useHydrated();
   const hostBusy = Boolean(pendingCommand);
@@ -89,17 +94,22 @@ export function HostCard({
   const rebootDisabled =
     actionsDisabled || hostBusy || isOffline || isWaking || isShuttingDown || isUnknown;
 
-  const secondaryStatus = agent?.last_seen_at && agentLastSeenStale
-    ? hydrated
-      ? `Agent stale · last seen ${formatRelativeTime(agent.last_seen_at)}`
-      : "Agent stale"
-    : !agentLastSeenStale && metricStale
-      ? "Metrics stale"
-      : null;
+  const secondaryStatus =
+    agent?.last_seen_at && agentLastSeenStale
+      ? hydrated
+        ? `Agent stale · last seen ${formatRelativeTime(agent.last_seen_at)}`
+        : "Agent stale"
+      : !agentLastSeenStale && metricStale
+        ? "Metrics stale"
+        : null;
 
   return (
     <article className="host-card">
-      <div className="host-card-header">
+      <div
+        className="host-card-header host-card-header-draggable"
+        {...(dragHandleProps?.attributes ?? {})}
+        {...(dragHandleProps?.listeners ?? {})}
+      >
         <div className="host-card-title-wrap">
           <div className="host-name">
             <Link href={`/hosts/${host.name}`}>{host.name}</Link>

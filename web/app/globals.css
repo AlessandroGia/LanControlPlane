@@ -661,6 +661,53 @@ button:disabled {
   background: rgba(255, 255, 255, 0.05);
 }
 
-.host-card-drag-handle:active {
+.host-card-header-draggable:active {
   cursor: grabbing;
+}
+
+.host-card-header-draggable {
+  cursor: grab;
+  user-select: none;
+  border-radius: 14px;
+  transition: background 180ms ease;
+}
+
+.host-card-header-draggable:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.host-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.host-card-sortable {
+  position: relative;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+.host-card-sortable .host-card {
+  transition:
+    box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 220ms ease,
+    background 220ms ease;
+}
+
+.host-card-sortable:hover .host-card {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.16);
+}
+
+.host-card-sortable.dragging {
+  z-index: 20;
+}
+
+.host-card-sortable.dragging .host-card {
+  transform: rotate(1deg);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
 }
