@@ -116,6 +116,7 @@ button:disabled {
   color: var(--muted);
   font-size: 0.9rem;
   margin-top: 0.3rem;
+  opacity: 0.7;
 }
 
 .host-actions {

@@ -71,10 +71,6 @@ export function HostCard({
             IP: {host.ip_address ?? "—"} · MAC: {host.mac_address ?? "—"}
           </div>
 
-          <div className="host-meta">
-            Agent: {agent ? `${agent.version} · ${agent.enabled ? "enabled" : "disabled"}` : "—"}
-          </div>
-
           {agent?.last_seen_at && agentLastSeenStale ? (
             <div className="host-meta stale-text">
               {hydrated
@@ -97,6 +93,10 @@ export function HostCard({
           ) : (
             <div className="host-meta">Metrics: —</div>
           )}
+
+          <div className="host-meta">
+            Agent: {agent ? `${agent.version} · ${agent.enabled ? "enabled" : "disabled"}` : "—"}
+          </div>
 
           {hostBusy ? <div className="host-meta">Pending command: {pendingCommand}</div> : null}
         </div>
