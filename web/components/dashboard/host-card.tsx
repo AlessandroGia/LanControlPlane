@@ -40,6 +40,21 @@ function formatUptime(totalSeconds: number): string {
   return `${minutes}m`;
 }
 
+function MetricTile({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="host-metric-tile">
+      <div className="host-metric-label">{label}</div>
+      <div className="host-metric-value">{value}</div>
+    </div>
+  );
+}
+
 export function HostCard({
   host,
   agent,
@@ -59,58 +74,95 @@ export function HostCard({
   const agentLastSeenStale =
     hydrated && agent?.last_seen_at ? isOlderThan(agent.last_seen_at, 60) : false;
 
+  const wakeDisabled =
+    actionsDisabled || hostBusy || host.state === "online" || host.state === "waking";
+
+  const shutdownDisabled =
+    actionsDisabled || hostBusy || host.state === "offline" || host.state === "unknown";
+
+  const rebootDisabled =
+    actionsDisabled || hostBusy || host.state === "offline" || host.state === "unknown";
+
+  const secondaryStatus = agent?.last_seen_at && agentLastSeenStale
+    ? hydrated
+      ? `Agent stale · last seen ${formatRelativeTime(agent.last_seen_at)}`
+      : "Agent stale"
+    : !agentLastSeenStale && metricStale
+      ? "Metrics stale"
+      : null;
+
   return (
-    <div className="host-card">
-      <div className="host-card-top">
-        <div>
+    <article className="host-card">
+      <div className="host-card-header">
+        <div className="host-card-title-wrap">
           <div className="host-name">
             <Link href={`/hosts/${host.name}`}>{host.name}</Link>
           </div>
 
-          <div className="host-meta">
-            IP: {host.ip_address ?? "—"} · MAC: {host.mac_address ?? "—"}
+          <div className="host-card-submeta">
+            <span>IP: {host.ip_address ?? "—"}</span>
+            <span>MAC: {host.mac_address ?? "—"}</span>
           </div>
 
-          {latestMetric ? (
-            <div className="host-meta">
-              CPU: {latestMetric.cpu_usage.toFixed(1)}% · RAM: {latestMetric.memory_usage.toFixed(1)}% · Uptime:{" "}
-              {formatUptime(latestMetric.uptime_seconds)}
-            </div>
-          ) : (
-            <div className="host-meta">Metrics: —</div>
-          )}
-
-          {agent?.last_seen_at && agentLastSeenStale ? (
-            <div className="host-meta stale-text">
-              {hydrated
-                ? `Agent stale · last seen ${formatRelativeTime(agent.last_seen_at)}`
-                : "Agent stale"}
-            </div>
-          ) : !agentLastSeenStale && metricStale ? (
-            <div className="host-meta stale-text">Metrics stale</div>
-          ) : null}
-
-          <div className="host-meta agent-info">
-            Agent: {agent ? `${agent.version} · ${agent.enabled ? "enabled" : "disabled"}` : "—"}
+          <div className="host-card-submeta">
+            <span>
+              Agent: {agent ? `${agent.version} · ${agent.enabled ? "enabled" : "disabled"}` : "—"}
+            </span>
           </div>
-
-          {hostBusy ? <div className="host-meta">Pending command: {pendingCommand}</div> : null}
         </div>
 
-        <span className={`badge ${host.state}`}>{stateLabelMap[host.state]}</span>
+        <div className="host-card-status-wrap">
+          <span className={`badge ${host.state}`}>{stateLabelMap[host.state]}</span>
+        </div>
       </div>
 
-      <div className="host-actions">
-        <button disabled={actionsDisabled || hostBusy} onClick={() => onWake?.(host.name)}>
+      <div className="host-card-body">
+        {latestMetric ? (
+          <div className="host-metrics-grid">
+            <MetricTile label="CPU" value={`${latestMetric.cpu_usage.toFixed(1)}%`} />
+            <MetricTile label="RAM" value={`${latestMetric.memory_usage.toFixed(1)}%`} />
+            <MetricTile label="Uptime" value={formatUptime(latestMetric.uptime_seconds)} />
+          </div>
+        ) : (
+          <div className="host-empty-metrics">No metrics yet.</div>
+        )}
+
+        {secondaryStatus ? (
+          <div className="host-card-secondary-status stale-text">{secondaryStatus}</div>
+        ) : null}
+
+        {hostBusy ? (
+          <div className="host-card-secondary-status">
+            Pending command: {pendingCommand}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="host-card-actions">
+        <button
+          className="host-action-button"
+          disabled={wakeDisabled}
+          onClick={() => onWake?.(host.name)}
+        >
           {pendingCommand === "wake" ? "Waking..." : "Wake"}
         </button>
-        <button disabled={actionsDisabled || hostBusy} onClick={() => onShutdown?.(host.name)}>
+
+        <button
+          className="host-action-button host-action-button-danger"
+          disabled={shutdownDisabled}
+          onClick={() => onShutdown?.(host.name)}
+        >
           {pendingCommand === "shutdown" ? "Shutting down..." : "Shutdown"}
         </button>
-        <button disabled={actionsDisabled || hostBusy} onClick={() => onReboot?.(host.name)}>
+
+        <button
+          className="host-action-button host-action-button-danger"
+          disabled={rebootDisabled}
+          onClick={() => onReboot?.(host.name)}
+        >
           {pendingCommand === "reboot" ? "Rebooting..." : "Reboot"}
         </button>
       </div>
-    </div>
+    </article>
   );
 }
