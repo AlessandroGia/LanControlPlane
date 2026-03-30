@@ -1,7 +1,7 @@
 import logging
 import socket
 
-from lan_control_plane_agent.core.config import get_settings
+from lan_control_plane_server.core.config import get_settings
 
 LOGGER = logging.getLogger(__name__)
 
