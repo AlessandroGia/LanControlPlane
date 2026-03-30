@@ -90,7 +90,7 @@ export function HostCard({
             <div className="host-meta stale-text">Metrics stale</div>
           ) : null}
 
-          <div className="host-meta">
+          <div className="host-meta agent-info">
             Agent: {agent ? `${agent.version} · ${agent.enabled ? "enabled" : "disabled"}` : "—"}
           </div>
 
