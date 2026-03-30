@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AuditPanel } from "@/components/dashboard/audit-panel";
-import { type HostFilterValue } from "@/components/dashboard/dashboard-filters";
+import { DashboardFilters, type HostFilterValue } from "@/components/dashboard/dashboard-filters";
+import { DashboardSummary } from "@/components/dashboard/dashboard-summary";
 import { HostList } from "@/components/dashboard/host-list";
 import { JobsPanel } from "@/components/dashboard/jobs-panel";
 import { getAgents, getAuditLogs, getHosts, getJobs, getLatestMetrics } from "@/lib/api";
@@ -11,7 +12,6 @@ import { isOlderThan } from "@/lib/time";
 import type { Agent, AuditLog, Host, HostLatestMetric, Job } from "@/lib/types";
 import { useHydrated } from "@/lib/use-hydrated";
 import { ControlPlaneWsClient, type WsServerEvent } from "@/lib/ws";
-import { DashboardSummary } from "@/components/dashboard/dashboard-summary";
 
 
 type DashboardClientProps = {
@@ -339,38 +339,39 @@ export function DashboardClient({
     }, [agents, hosts, hydrated, latestMetrics, search, statusFilter]);
 
     return (
-
-        <DashboardSummary
-        hosts={hosts}
-        agents={agents}
-        latestMetrics={latestMetrics}
-        />
-
-        <DashboardFilters
-        search={search}
-        statusFilter={statusFilter}
-        onSearchChange={setSearch}
-        onStatusFilterChange={setStatusFilter}
-        />
-
-        <div className="dashboard-grid">
-            <div className="left-column">
-                <HostList
-                hosts={filteredHosts}
+        <>
+            <DashboardSummary
+                hosts={hosts}
                 agents={agents}
                 latestMetrics={latestMetrics}
-                onWake={handleWake}
-                onShutdown={handleShutdown}
-                onReboot={handleReboot}
-                actionsDisabled={actionsDisabled}
-                pendingCommands={pendingCommands}
-                />
-            </div>
+            />
 
-            <div className="right-column">
-                <JobsPanel jobs={jobs} />
-                <AuditPanel logs={auditLogs} />
+            <DashboardFilters
+                search={search}
+                statusFilter={statusFilter}
+                onSearchChange={setSearch}
+                onStatusFilterChange={setStatusFilter}
+            />
+
+            <div className="dashboard-grid">
+                <div className="left-column">
+                    <HostList
+                        hosts={filteredHosts}
+                        agents={agents}
+                        latestMetrics={latestMetrics}
+                        onWake={handleWake}
+                        onShutdown={handleShutdown}
+                        onReboot={handleReboot}
+                        actionsDisabled={actionsDisabled}
+                        pendingCommands={pendingCommands}
+                    />
+                </div>
+
+                <div className="right-column">
+                    <JobsPanel jobs={jobs} />
+                    <AuditPanel logs={auditLogs} />
+                </div>
             </div>
-        </div>
+        </>
     );
 }
