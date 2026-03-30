@@ -71,28 +71,24 @@ export function HostCard({
             IP: {host.ip_address ?? "—"} · MAC: {host.mac_address ?? "—"}
           </div>
 
+          {latestMetric ? (
+            <div className="host-meta">
+              CPU: {latestMetric.cpu_usage.toFixed(1)}% · RAM: {latestMetric.memory_usage.toFixed(1)}% · Uptime:{" "}
+              {formatUptime(latestMetric.uptime_seconds)}
+            </div>
+          ) : (
+            <div className="host-meta">Metrics: —</div>
+          )}
+
           {agent?.last_seen_at && agentLastSeenStale ? (
             <div className="host-meta stale-text">
               {hydrated
                 ? `Agent stale · last seen ${formatRelativeTime(agent.last_seen_at)}`
                 : "Agent stale"}
             </div>
+          ) : !agentLastSeenStale && metricStale ? (
+            <div className="host-meta stale-text">Metrics stale</div>
           ) : null}
-
-          {latestMetric ? (
-            <>
-              <div className="host-meta">
-                CPU: {latestMetric.cpu_usage.toFixed(1)}% · RAM: {latestMetric.memory_usage.toFixed(1)}% · Uptime:{" "}
-                {formatUptime(latestMetric.uptime_seconds)}
-              </div>
-
-              {metricStale ? (
-                <div className="host-meta stale-text">Metrics stale</div>
-              ) : null}
-            </>
-          ) : (
-            <div className="host-meta">Metrics: —</div>
-          )}
 
           <div className="host-meta">
             Agent: {agent ? `${agent.version} · ${agent.enabled ? "enabled" : "disabled"}` : "—"}
