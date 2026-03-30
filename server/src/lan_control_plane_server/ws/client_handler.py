@@ -205,7 +205,6 @@ async def _handle_wake_command(
 ) -> None:
     if not mac_address:
         session = SessionLocal()
-        settings = get_settings()
         try:
             job_service = JobService(session)
             audit_service = AuditService(session)
@@ -236,6 +235,7 @@ async def _handle_wake_command(
         return
 
     try:
+        settings = get_settings()
         wol_service = WakeOnLanService(
             helper_base_url=settings.wol_helper_base_url,
             broadcast_ip=settings.wol_broadcast_ip,
