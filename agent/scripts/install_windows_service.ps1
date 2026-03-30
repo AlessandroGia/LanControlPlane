@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$AgentDir = $ScriptDir
+$AgentDir = Split-Path -Parent $ScriptDir
 $RepoRoot = Split-Path -Parent $AgentDir
 
 $InstallDir = "C:\Program Files\LanControlPlaneAgent"
@@ -10,15 +10,15 @@ $WinSWExe = Join-Path $InstallDir "LanControlPlaneAgent.exe"
 $WinSWXmlSource = Join-Path $AgentDir "packaging\windows\LanControlPlaneAgent.xml"
 $WinSWXmlDest = Join-Path $InstallDir "LanControlPlaneAgent.xml"
 
-Write-Host "==> Creating install directories"
-New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
-New-Item -ItemType Directory -Force -Path $LogsDir | Out-Null
+Write-Host "==> ScriptDir: $ScriptDir"
+Write-Host "==> AgentDir:  $AgentDir"
+Write-Host "==> RepoRoot:  $RepoRoot"
 
 Write-Host "==> Copying agent and shared"
 Remove-Item -Recurse -Force (Join-Path $InstallDir "agent") -ErrorAction SilentlyContinue
 Remove-Item -Recurse -Force (Join-Path $InstallDir "shared") -ErrorAction SilentlyContinue
 
-Copy-Item -Recurse -Force (Join-Path $AgentDir "*") (Join-Path $InstallDir "agent")
+Copy-Item -Recurse -Force $AgentDir (Join-Path $InstallDir "agent")
 Copy-Item -Recurse -Force (Join-Path $RepoRoot "shared") (Join-Path $InstallDir "shared")
 
 Write-Host "==> Preparing env file"
