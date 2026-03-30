@@ -5,16 +5,16 @@ from lan_control_plane_server.services.audit_service import AuditService
 from lan_control_plane_server.services.host_service import HostService
 from lan_control_plane_server.services.job_service import JobService
 from lan_control_plane_server.services.metric_service import HostMetricService
+from lan_control_plane_server.utils.network import normalize_mac_address
 from lan_control_plane_server.ws.manager import manager
 from lan_control_plane_shared.enums.host_state import HostState
 from lan_control_plane_shared.enums.job_status import JobStatus
-from lan_control_plane_shared.protocol.agent_messages import (
-    AgentAck,
-    AgentHeartbeat,
-    AgentHello,
-    AgentResult,
-)
-from lan_control_plane_shared.protocol.server_messages import AuthOk, ErrorMessage
+from lan_control_plane_shared.protocol.agent_messages import (AgentAck,
+                                                              AgentHeartbeat,
+                                                              AgentHello,
+                                                              AgentResult)
+from lan_control_plane_shared.protocol.server_messages import (AuthOk,
+                                                               ErrorMessage)
 from pydantic import ValidationError
 
 
@@ -33,11 +33,12 @@ async def register_agent_connection(websocket: WebSocket, hello: AgentHello) -> 
             ip_address=hello.ip_address,
         )
 
-        if hello.ip_address is not None or hello.mac_address is not None:
+        normalized_mac_address = normalize_mac_address(hello.mac_address)
+        if hello.ip_address is not None or normalized_mac_address is not None:
             host_service.update_host_network_info(
                 name=hello.agent_id,
                 ip_address=hello.ip_address,
-                mac_address=hello.mac_address,
+                mac_address=normalized_mac_address,
             )
 
             audit_service.log_event(
@@ -48,7 +49,7 @@ async def register_agent_connection(websocket: WebSocket, hello: AgentHello) -> 
                 target_id=hello.agent_id,
                 metadata={
                     "ip_address": hello.ip_address,
-                    "mac_address": hello.mac_address,
+                    "mac_address": normalized_mac_address,
                 },
             )
 

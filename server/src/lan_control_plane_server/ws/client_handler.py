@@ -5,6 +5,7 @@ from lan_control_plane_server.services.audit_service import AuditService
 from lan_control_plane_server.services.host_service import HostService
 from lan_control_plane_server.services.job_service import JobService
 from lan_control_plane_server.services.wol_service import WakeOnLanService
+from lan_control_plane_server.utils.network import normalize_mac_address
 from lan_control_plane_server.ws.manager import manager
 from lan_control_plane_shared.enums.command import Command
 from lan_control_plane_shared.enums.host_state import HostState
@@ -240,7 +241,8 @@ async def _handle_wake_command(
             broadcast_ip=settings.wol_broadcast_ip,
             port=settings.wol_port,
         )
-        wol_service.send_magic_packet(mac_address)
+        normalized_mac_address = normalize_mac_address(mac_address)
+        wol_service.send_magic_packet(normalized_mac_address)
     except Exception as exc:
         session = SessionLocal()
         try:

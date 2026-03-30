@@ -1,8 +1,7 @@
-from __future__ import annotations
-
 import logging
 
 import httpx
+from lan_control_plane_server.utils.network import normalize_mac_address
 
 LOGGER = logging.getLogger(__name__)
 
@@ -19,9 +18,10 @@ class WakeOnLanService:
         self.port = port
 
     def send_magic_packet(self, mac_address: str) -> None:
+        normalized_mac_address = normalize_mac_address(mac_address)
         LOGGER.info(
             "Requesting host-side WOL for MAC=%s broadcast_ip=%s port=%s",
-            mac_address,
+            normalized_mac_address,
             self.broadcast_ip,
             self.port,
         )
@@ -29,7 +29,7 @@ class WakeOnLanService:
         response = httpx.post(
             f"{self.helper_base_url}/wake",
             json={
-                "mac_address": mac_address,
+                "mac_address": normalized_mac_address,
                 "broadcast_ip": self.broadcast_ip,
                 "port": self.port,
             },

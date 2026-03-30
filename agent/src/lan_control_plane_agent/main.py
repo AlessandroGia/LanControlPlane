@@ -1,22 +1,24 @@
 import asyncio
 import json
 import logging
-
-import websockets
 import socket
 
+import websockets
 from lan_control_plane_agent.core.config import get_settings
 from lan_control_plane_agent.core.logging import configure_logging
 from lan_control_plane_agent.handlers.command_handler import handle_command
-from lan_control_plane_agent.system.network_info import get_mac_address, get_primary_ip_address
-from lan_control_plane_agent.system.metrics import (
-    get_cpu_usage,
-    get_memory_usage,
-    get_uptime_seconds,
-)
+from lan_control_plane_agent.system.metrics import (get_cpu_usage,
+                                                    get_memory_usage,
+                                                    get_uptime_seconds)
+from lan_control_plane_agent.system.network_info import (
+    get_mac_address, get_primary_ip_address)
 
 LOGGER = logging.getLogger(__name__)
 
+def normalize_mac_address(mac_address: str | None) -> str | None:
+    if mac_address is None:
+        return None
+    return mac_address.strip().lower().replace("-", ":")
 
 async def heartbeat_loop(
     websocket: websockets.ClientConnection,
@@ -93,14 +95,13 @@ async def receive_loop(
                 dry_run=dry_run,
             )
 
-
 async def run_agent() -> None:
     settings = get_settings()
 
     while True:
         try:
             LOGGER.info("Connecting to %s", settings.server_ws_agent_url)
-
+            normalized_mac = normalize_mac_address(get_mac_address())
             async with websockets.connect(settings.server_ws_agent_url) as websocket:
                 hello_message = {
                     "type": "hello",
@@ -109,7 +110,7 @@ async def run_agent() -> None:
                     "hostname": socket.gethostname(),
                     "version": "0.1.0",
                     "ip_address": get_primary_ip_address(),
-                    "mac_address": get_mac_address(),
+                    "mac_address": normalized_mac,
                 }
                 await websocket.send(json.dumps(hello_message))
 
