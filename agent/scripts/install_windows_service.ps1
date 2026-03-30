@@ -21,6 +21,10 @@ Remove-Item -Recurse -Force (Join-Path $InstallDir "shared") -ErrorAction Silent
 Copy-Item -Recurse -Force $AgentDir (Join-Path $InstallDir "agent")
 Copy-Item -Recurse -Force (Join-Path $RepoRoot "shared") (Join-Path $InstallDir "shared")
 
+$LogsDir = "C:\ProgramData\LanControlPlaneAgent\logs"
+
+New-Item -ItemType Directory -Force -Path $LogsDir | Out-Null
+
 Write-Host "==> Preparing env file"
 if (-not (Test-Path (Join-Path $InstallDir "agent.env"))) {
     $LocalEnv = Join-Path $AgentDir ".env"
