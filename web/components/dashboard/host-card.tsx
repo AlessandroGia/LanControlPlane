@@ -74,14 +74,20 @@ export function HostCard({
   const agentLastSeenStale =
     hydrated && agent?.last_seen_at ? isOlderThan(agent.last_seen_at, 60) : false;
 
+  const isOffline = host.state === "offline";
+  const isOnline = host.state === "online";
+  const isWaking = host.state === "waking";
+  const isShuttingDown = host.state === "shutting_down";
+  const isUnknown = host.state === "unknown";
+
   const wakeDisabled =
-    actionsDisabled || hostBusy || host.state === "online" || host.state === "waking";
+    actionsDisabled || hostBusy || isOnline || isWaking || isShuttingDown || isUnknown;
 
   const shutdownDisabled =
-    actionsDisabled || hostBusy || host.state === "offline" || host.state === "unknown";
+    actionsDisabled || hostBusy || isOffline || isWaking || isShuttingDown || isUnknown;
 
   const rebootDisabled =
-    actionsDisabled || hostBusy || host.state === "offline" || host.state === "unknown";
+    actionsDisabled || hostBusy || isOffline || isWaking || isShuttingDown || isUnknown;
 
   const secondaryStatus = agent?.last_seen_at && agentLastSeenStale
     ? hydrated
@@ -139,29 +145,36 @@ export function HostCard({
       </div>
 
       <div className="host-card-actions">
-        <button
-          className="host-action-button"
-          disabled={wakeDisabled}
-          onClick={() => onWake?.(host.name)}
-        >
-          {pendingCommand === "wake" ? "Waking..." : "Wake"}
-        </button>
+        <div className="host-card-actions-left">
+          <button
+            className="host-action-button host-action-button-danger"
+            disabled={shutdownDisabled}
+            onClick={() => onShutdown?.(host.name)}
+            title={shutdownDisabled ? "Shutdown is not available for this host state" : "Shutdown host"}
+          >
+            {pendingCommand === "shutdown" ? "Shutting down..." : "Shutdown"}
+          </button>
 
-        <button
-          className="host-action-button host-action-button-danger"
-          disabled={shutdownDisabled}
-          onClick={() => onShutdown?.(host.name)}
-        >
-          {pendingCommand === "shutdown" ? "Shutting down..." : "Shutdown"}
-        </button>
+          <button
+            className="host-action-button host-action-button-danger"
+            disabled={rebootDisabled}
+            onClick={() => onReboot?.(host.name)}
+            title={rebootDisabled ? "Reboot is not available for this host state" : "Reboot host"}
+          >
+            {pendingCommand === "reboot" ? "Rebooting..." : "Reboot"}
+          </button>
+        </div>
 
-        <button
-          className="host-action-button host-action-button-danger"
-          disabled={rebootDisabled}
-          onClick={() => onReboot?.(host.name)}
-        >
-          {pendingCommand === "reboot" ? "Rebooting..." : "Reboot"}
-        </button>
+        <div className="host-card-actions-right">
+          <button
+            className="host-action-button host-action-button-primary"
+            disabled={wakeDisabled}
+            onClick={() => onWake?.(host.name)}
+            title={wakeDisabled ? "Wake is not available for this host state" : "Wake host"}
+          >
+            {pendingCommand === "wake" ? "Waking..." : "Wake"}
+          </button>
+        </div>
       </div>
     </article>
   );
