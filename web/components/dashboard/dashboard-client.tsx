@@ -54,6 +54,7 @@ export function DashboardClient({
     }, []);
 
     const refreshData = useCallback(async (): Promise<void> => {
+        console.log("Refreshing dashboard data");
         if (refreshInFlightRef.current) {
             return;
         }
@@ -89,6 +90,8 @@ export function DashboardClient({
 
     const handleWsEvent = useCallback(
         (event: WsServerEvent): void => {
+            console.log("WS event received:", event);
+
             if (event.type === "connected") {
                 return;
             }
@@ -105,6 +108,23 @@ export function DashboardClient({
             }
 
             if (event.type === "host_status_changed") {
+                setHosts((currentHosts) => {
+                    const exists = currentHosts.some((host) => host.name === event.host_id);
+
+                    if (!exists) {
+                        return currentHosts;
+                    }
+
+                    return currentHosts.map((host) =>
+                        host.name === event.host_id
+                            ? {
+                                ...host,
+                                state: event.state,
+                            }
+                            : host,
+                    );
+                });
+
                 if (
                     event.state === "waking" ||
                     event.state === "shutting_down" ||
