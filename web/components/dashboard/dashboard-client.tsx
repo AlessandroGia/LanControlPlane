@@ -36,9 +36,14 @@ export function DashboardClient({
     const [pendingCommands, setPendingCommands] = useState<PendingCommandMap>({});
 
     const wsClientRef = useRef<ControlPlaneWsClient | null>(null);
+
     const fastRefreshInFlightRef = useRef(false);
+    const fastRefreshPendingRef = useRef(false);
+
     const fullRefreshInFlightRef = useRef(false);
-    const scheduledRefreshRef = useRef<number | null>(null);
+    const fullRefreshPendingRef = useRef(false);
+
+    const scheduledFastRefreshRef = useRef<number | null>(null);
 
     const clearPendingForHost = useCallback((hostName: string): void => {
         setPendingCommands((current) => {
@@ -50,6 +55,7 @@ export function DashboardClient({
 
     const refreshFastData = useCallback(async (): Promise<void> => {
         if (fastRefreshInFlightRef.current) {
+            fastRefreshPendingRef.current = true;
             return;
         }
 
@@ -85,11 +91,17 @@ export function DashboardClient({
             console.error("Failed to refresh fast dashboard data", error);
         } finally {
             fastRefreshInFlightRef.current = false;
+
+            if (fastRefreshPendingRef.current) {
+                fastRefreshPendingRef.current = false;
+                void refreshFastData();
+            }
         }
     }, []);
 
     const refreshFullData = useCallback(async (): Promise<void> => {
         if (fullRefreshInFlightRef.current) {
+            fullRefreshPendingRef.current = true;
             return;
         }
 
@@ -139,18 +151,23 @@ export function DashboardClient({
             console.error("Failed to refresh full dashboard data", error);
         } finally {
             fullRefreshInFlightRef.current = false;
+
+            if (fullRefreshPendingRef.current) {
+                fullRefreshPendingRef.current = false;
+                void refreshFullData();
+            }
         }
     }, []);
 
     const scheduleFastRefresh = useCallback((): void => {
-        if (scheduledRefreshRef.current !== null) {
+        if (scheduledFastRefreshRef.current !== null) {
             return;
         }
 
-        scheduledRefreshRef.current = window.setTimeout(() => {
-            scheduledRefreshRef.current = null;
+        scheduledFastRefreshRef.current = window.setTimeout(() => {
+            scheduledFastRefreshRef.current = null;
             void refreshFastData();
-        }, 500);
+        }, 800);
     }, [refreshFastData]);
 
     const handleWsEvent = useCallback(
@@ -217,9 +234,9 @@ export function DashboardClient({
             wsClientRef.current = null;
             setIsWsReady(false);
 
-            if (scheduledRefreshRef.current !== null) {
-                window.clearTimeout(scheduledRefreshRef.current);
-                scheduledRefreshRef.current = null;
+            if (scheduledFastRefreshRef.current !== null) {
+                window.clearTimeout(scheduledFastRefreshRef.current);
+                scheduledFastRefreshRef.current = null;
             }
         };
     }, [handleWsEvent, refreshFullData]);
@@ -227,7 +244,7 @@ export function DashboardClient({
     useEffect(() => {
         const intervalId = window.setInterval(() => {
             void refreshFastData();
-        }, 5000);
+        }, 10000);
 
         return () => {
             window.clearInterval(intervalId);

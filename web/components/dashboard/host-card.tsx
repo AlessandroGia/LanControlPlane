@@ -75,15 +75,13 @@ export function HostCard({
             Agent: {agent ? `${agent.version} · ${agent.enabled ? "enabled" : "disabled"}` : "—"}
           </div>
 
-          {agent?.last_seen_at ? (
-            <div className={`host-meta ${agentLastSeenStale ? "stale-text" : ""}`}>
+          {agent?.last_seen_at && agentLastSeenStale ? (
+            <div className="host-meta stale-text">
               {hydrated
-                ? `Agent last seen ${formatRelativeTime(agent.last_seen_at)}${agentLastSeenStale ? " · stale" : ""}`
-                : "Agent last seen —"}
+                ? `Agent stale · last seen ${formatRelativeTime(agent.last_seen_at)}`
+                : "Agent stale"}
             </div>
-          ) : (
-            <div className="host-meta">Agent last seen: —</div>
-          )}
+          ) : null}
 
           {latestMetric ? (
             <>
