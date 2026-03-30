@@ -45,8 +45,8 @@ export function JobsPanel({ jobs }: JobsPanelProps) {
             </div>
           </div>
 
-          {job.message ? (
-            <div className="activity-item-message">{job.message}</div>
+          {job.result_message ? (
+            <div className="activity-item-message">{job.result_message}</div>
           ) : null}
         </div>
       ))}
