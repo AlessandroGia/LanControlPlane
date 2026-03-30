@@ -1,0 +1,16 @@
+[Unit]
+Description=LAN Control Plane WOL Helper
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/lan-control-plane-wol-helper
+ExecStart=/opt/lan-control-plane-wol-helper/.venv/bin/uvicorn app:app --host 0.0.0.0 --port 8099
+Restart=always
+RestartSec=5
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target

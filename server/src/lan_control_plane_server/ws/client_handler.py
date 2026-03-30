@@ -1,6 +1,5 @@
 from fastapi import WebSocket
-from pydantic import ValidationError
-
+from lan_control_plane_server.core.config import get_settings
 from lan_control_plane_server.db.session import SessionLocal
 from lan_control_plane_server.services.audit_service import AuditService
 from lan_control_plane_server.services.host_service import HostService
@@ -10,13 +9,14 @@ from lan_control_plane_server.ws.manager import manager
 from lan_control_plane_shared.enums.command import Command
 from lan_control_plane_shared.enums.host_state import HostState
 from lan_control_plane_shared.enums.job_status import JobStatus
-from lan_control_plane_shared.protocol.client_messages import ClientCommandRequest, ClientGetHosts
-from lan_control_plane_shared.protocol.server_messages import (
-    AuthOk,
-    ErrorMessage,
-    HostsSnapshot,
-    CommandMessage,
-)
+from lan_control_plane_shared.protocol.client_messages import (
+    ClientCommandRequest, ClientGetHosts)
+from lan_control_plane_shared.protocol.server_messages import (AuthOk,
+                                                               CommandMessage,
+                                                               ErrorMessage,
+                                                               HostsSnapshot)
+from pydantic import ValidationError
+
 
 async def _send_hosts_snapshot(websocket: WebSocket) -> None:
     session = SessionLocal()
@@ -204,6 +204,7 @@ async def _handle_wake_command(
 ) -> None:
     if not mac_address:
         session = SessionLocal()
+        settings = get_settings()
         try:
             job_service = JobService(session)
             audit_service = AuditService(session)
@@ -234,7 +235,11 @@ async def _handle_wake_command(
         return
 
     try:
-        wol_service = WakeOnLanService()
+        wol_service = WakeOnLanService(
+            helper_base_url=settings.wol_helper_base_url,
+            broadcast_ip=settings.wol_broadcast_ip,
+            port=settings.wol_port,
+        )
         wol_service.send_magic_packet(mac_address)
     except Exception as exc:
         session = SessionLocal()
