@@ -3,6 +3,8 @@
 import { formatRelativeTime, isOlderThan } from "@/lib/time";
 import type { Agent, Host, HostLatestMetric } from "@/lib/types";
 import { useHydrated } from "@/lib/use-hydrated";
+import type { DraggableAttributes } from "@dnd-kit/core";
+import type { SyntheticListenerMap } from "@dnd-kit/core/dist/hooks/utilities";
 import Link from "next/link";
 
 type HostCardProps = {
@@ -15,8 +17,8 @@ type HostCardProps = {
   actionsDisabled?: boolean;
   pendingCommand?: "wake" | "shutdown" | "reboot";
   dragHandleProps?: {
-    attributes: Record<string, unknown>;
-    listeners: Record<string, unknown>;
+    attributes: DraggableAttributes;
+    listeners: SyntheticListenerMap | undefined;
   };
 };
 
