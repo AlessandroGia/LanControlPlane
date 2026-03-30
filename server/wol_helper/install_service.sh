@@ -10,6 +10,9 @@ echo "==> Installing wakeonlan if missing"
 if ! command -v wakeonlan >/dev/null 2>&1; then
   sudo apt-get install wakeonlan -y
 fi
+if ! command -v venv >/dev/null 2>&1; then
+  sudo apt-get install python3-venv -y
+fi
 
 echo "==> Creating install directory"
 sudo mkdir -p "$INSTALL_DIR"
