@@ -3,7 +3,7 @@
   <name>Lan Control Plane Agent</name>
   <description>LAN Control Plane Agent</description>
 
-  <executable>C:\Program Files\LanControlPlaneAgent\.venv\Scripts\python.exe</executable>
+  <executable>C:\Program Files\LanControlPlaneAgent\agent\.venv\Scripts\python.exe</executable>
   <arguments>-m lan_control_plane_agent.main</arguments>
 
   <workingdirectory>C:\Program Files\LanControlPlaneAgent\agent</workingdirectory>
