@@ -6,13 +6,7 @@ import { AuditPanel } from "@/components/dashboard/audit-panel";
 import { HostList } from "@/components/dashboard/host-list";
 import { JobsPanel } from "@/components/dashboard/jobs-panel";
 import { getAgents, getAuditLogs, getHosts, getJobs, getLatestMetrics } from "@/lib/api";
-import type {
-    Agent,
-    AuditLog,
-    Host,
-    HostLatestMetric,
-    Job,
-} from "@/lib/types";
+import type { Agent, AuditLog, Host, HostLatestMetric, Job } from "@/lib/types";
 import { ControlPlaneWsClient, type WsServerEvent } from "@/lib/ws";
 
 type DashboardClientProps = {
@@ -36,14 +30,15 @@ export function DashboardClient({
     const [jobs, setJobs] = useState<Job[]>(initialJobs);
     const [agents, setAgents] = useState<Agent[]>(initialAgents);
     const [auditLogs, setAuditLogs] = useState<AuditLog[]>(initialAuditLogs);
-    const [latestMetrics, setLatestMetrics] =
-        useState<HostLatestMetric[]>(initialLatestMetrics);
+    const [latestMetrics, setLatestMetrics] = useState<HostLatestMetric[]>(initialLatestMetrics);
 
     const [isWsReady, setIsWsReady] = useState(false);
     const [pendingCommands, setPendingCommands] = useState<PendingCommandMap>({});
 
     const wsClientRef = useRef<ControlPlaneWsClient | null>(null);
-    const refreshInFlightRef = useRef(false);
+    const fastRefreshInFlightRef = useRef(false);
+    const fullRefreshInFlightRef = useRef(false);
+    const scheduledRefreshRef = useRef<number | null>(null);
 
     const clearPendingForHost = useCallback((hostName: string): void => {
         setPendingCommands((current) => {
@@ -53,22 +48,63 @@ export function DashboardClient({
         });
     }, []);
 
-    const refreshData = useCallback(async (): Promise<void> => {
-        if (refreshInFlightRef.current) {
+    const refreshFastData = useCallback(async (): Promise<void> => {
+        if (fastRefreshInFlightRef.current) {
             return;
         }
 
-        refreshInFlightRef.current = true;
+        fastRefreshInFlightRef.current = true;
 
         try {
-            const criticalResults = await Promise.allSettled([
+            const results = await Promise.allSettled([
                 getHosts(),
-                getJobs(),
                 getAgents(),
                 getLatestMetrics(),
             ]);
 
-            const [hostsResult, jobsResult, agentsResult, latestMetricsResult] = criticalResults;
+            const [hostsResult, agentsResult, metricsResult] = results;
+
+            if (hostsResult.status === "fulfilled") {
+                setHosts(hostsResult.value);
+            } else {
+                console.error("Failed to refresh hosts", hostsResult.reason);
+            }
+
+            if (agentsResult.status === "fulfilled") {
+                setAgents(agentsResult.value);
+            } else {
+                console.error("Failed to refresh agents", agentsResult.reason);
+            }
+
+            if (metricsResult.status === "fulfilled") {
+                setLatestMetrics(metricsResult.value);
+            } else {
+                console.error("Failed to refresh latest metrics", metricsResult.reason);
+            }
+        } catch (error) {
+            console.error("Failed to refresh fast dashboard data", error);
+        } finally {
+            fastRefreshInFlightRef.current = false;
+        }
+    }, []);
+
+    const refreshFullData = useCallback(async (): Promise<void> => {
+        if (fullRefreshInFlightRef.current) {
+            return;
+        }
+
+        fullRefreshInFlightRef.current = true;
+
+        try {
+            const results = await Promise.allSettled([
+                getHosts(),
+                getJobs(),
+                getAgents(),
+                getAuditLogs(),
+                getLatestMetrics(),
+            ]);
+
+            const [hostsResult, jobsResult, agentsResult, auditLogsResult, metricsResult] = results;
 
             if (hostsResult.status === "fulfilled") {
                 setHosts(hostsResult.value);
@@ -88,68 +124,53 @@ export function DashboardClient({
                 console.error("Failed to refresh agents", agentsResult.reason);
             }
 
-            if (latestMetricsResult.status === "fulfilled") {
-                setLatestMetrics(latestMetricsResult.value);
-            } else {
-                console.error("Failed to refresh latest metrics", latestMetricsResult.reason);
-            }
-
-            const auditLogsResult = await Promise.race([
-                getAuditLogs().then((value) => ({ ok: true as const, value })),
-                new Promise<{ ok: false; reason: string }>((resolve) =>
-                    window.setTimeout(() => resolve({ ok: false, reason: "timeout" }), 3000),
-                ),
-            ]);
-
-            if (auditLogsResult.ok) {
+            if (auditLogsResult.status === "fulfilled") {
                 setAuditLogs(auditLogsResult.value);
             } else {
-                console.warn("Skipping audit logs refresh:", auditLogsResult.reason);
+                console.error("Failed to refresh audit logs", auditLogsResult.reason);
+            }
+
+            if (metricsResult.status === "fulfilled") {
+                setLatestMetrics(metricsResult.value);
+            } else {
+                console.error("Failed to refresh latest metrics", metricsResult.reason);
             }
         } catch (error) {
-            console.error("Failed to refresh dashboard data", error);
+            console.error("Failed to refresh full dashboard data", error);
         } finally {
-            refreshInFlightRef.current = false;
+            fullRefreshInFlightRef.current = false;
         }
     }, []);
 
+    const scheduleFastRefresh = useCallback((): void => {
+        if (scheduledRefreshRef.current !== null) {
+            return;
+        }
+
+        scheduledRefreshRef.current = window.setTimeout(() => {
+            scheduledRefreshRef.current = null;
+            void refreshFastData();
+        }, 500);
+    }, [refreshFastData]);
+
     const handleWsEvent = useCallback(
         (event: WsServerEvent): void => {
-            console.log("WS event received:", event);
-
             if (event.type === "connected") {
                 return;
             }
 
             if (event.type === "auth_ok") {
                 setIsWsReady(true);
-                void refreshData();
+                void refreshFullData();
                 return;
             }
 
             if (event.type === "hosts_snapshot") {
-                void refreshData();
+                scheduleFastRefresh();
                 return;
             }
 
             if (event.type === "host_status_changed") {
-                setHosts((currentHosts) => {
-                    const exists = currentHosts.some((host) => host.name === event.host_id);
-
-                    if (!exists) {
-                        return currentHosts;
-                    }
-
-                    return currentHosts.map((host) =>
-                        host.name === event.host_id
-                            ? {
-                                ...host,
-                                state: event.state,
-                            }
-                            : host,
-                    );
-                });
-
                 if (
                     event.state === "waking" ||
                     event.state === "shutting_down" ||
@@ -159,7 +180,12 @@ export function DashboardClient({
                     clearPendingForHost(event.host_id);
                 }
 
-                void refreshData();
+                scheduleFastRefresh();
+                return;
+            }
+
+            if (event.type === "agent_heartbeat") {
+                scheduleFastRefresh();
                 return;
             }
 
@@ -168,7 +194,7 @@ export function DashboardClient({
                     clearPendingForHost(event.host_id);
                 }
 
-                void refreshData();
+                void refreshFullData();
                 return;
             }
 
@@ -176,7 +202,7 @@ export function DashboardClient({
                 console.error("WS server error:", event.message);
             }
         },
-        [clearPendingForHost, refreshData],
+        [clearPendingForHost, refreshFullData, scheduleFastRefresh],
     );
 
     useEffect(() => {
@@ -184,24 +210,39 @@ export function DashboardClient({
         wsClientRef.current = client;
         client.connect();
 
-        void refreshData();
+        void refreshFullData();
 
         return () => {
             client.disconnect();
             wsClientRef.current = null;
             setIsWsReady(false);
+
+            if (scheduledRefreshRef.current !== null) {
+                window.clearTimeout(scheduledRefreshRef.current);
+                scheduledRefreshRef.current = null;
+            }
         };
-    }, [handleWsEvent, refreshData]);
+    }, [handleWsEvent, refreshFullData]);
 
     useEffect(() => {
         const intervalId = window.setInterval(() => {
-            void refreshData();
-        }, 15000);
+            void refreshFastData();
+        }, 5000);
 
         return () => {
             window.clearInterval(intervalId);
         };
-    }, [refreshData]);
+    }, [refreshFastData]);
+
+    useEffect(() => {
+        const intervalId = window.setInterval(() => {
+            void refreshFullData();
+        }, 30000);
+
+        return () => {
+            window.clearInterval(intervalId);
+        };
+    }, [refreshFullData]);
 
     const actionsDisabled = useMemo(() => !isWsReady, [isWsReady]);
 

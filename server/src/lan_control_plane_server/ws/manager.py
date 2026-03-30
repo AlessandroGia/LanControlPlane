@@ -1,7 +1,8 @@
 from fastapi import WebSocket
 from lan_control_plane_shared.enums.host_state import HostState
 from lan_control_plane_shared.enums.job_status import JobStatus
-from lan_control_plane_shared.protocol.server_messages import HostStatusChanged, JobUpdate
+from lan_control_plane_shared.protocol.server_messages import (
+    HostStatusChanged, JobUpdate)
 
 
 class ConnectionManager:
@@ -58,6 +59,22 @@ class ConnectionManager:
         for client in self.client_connections:
             try:
                 await client.send_json(payload.model_dump(mode="json"))
+            except Exception:
+                stale_clients.append(client)
+
+        for client in stale_clients:
+            self.disconnect_client(client)
+
+    async def broadcast_agent_heartbeat(self, host_id: str) -> None:
+        payload = {
+            "type": "agent_heartbeat",
+            "host_id": host_id,
+        }
+        stale_clients: list[WebSocket] = []
+
+        for client in self.client_connections:
+            try:
+                await client.send_json(payload)
             except Exception:
                 stale_clients.append(client)
 

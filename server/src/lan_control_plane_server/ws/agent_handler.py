@@ -158,6 +158,8 @@ async def _handle_heartbeat(websocket: WebSocket, raw_message: dict[str, object]
     finally:
         session.close()
 
+    await manager.broadcast_agent_heartbeat(heartbeat.agent_id)
+
     await websocket.send_json(
         {
             "type": "heartbeat_ack",
