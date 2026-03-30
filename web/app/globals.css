@@ -555,3 +555,41 @@ button:disabled {
 .status-pill.failed {
   opacity: 0.95;
 }
+
+.collapsible-panel-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.collapsible-panel-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.collapsible-panel-chevron {
+  font-size: 0.95rem;
+  opacity: 0.8;
+}
+
+.collapsible-panel-title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.collapsible-panel-count {
+  margin-left: 0.35rem;
+  opacity: 0.7;
+  font-weight: 500;
+}
+
+.collapsible-panel-content {
+  margin-top: 0.9rem;
+}

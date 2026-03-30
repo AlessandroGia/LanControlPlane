@@ -22,35 +22,29 @@ export function AuditPanel({ logs }: AuditPanelProps) {
     )
     .slice(0, 10);
 
+  if (sortedLogs.length === 0) {
+    return <div className="panel-empty-state">No audit logs yet.</div>;
+  }
+
   return (
-    <div className="panel">
-      <div className="panel-header-row">
-        <h2>Audit logs</h2>
-      </div>
-
-      {sortedLogs.length === 0 ? (
-        <div className="panel-empty-state">No audit logs yet.</div>
-      ) : (
-        <div className="activity-list">
-          {sortedLogs.map((log) => (
-            <div key={log.id} className="activity-item">
-              <div className="activity-item-top">
-                <div className="activity-item-title">
-                  <strong>{log.action}</strong>
-                </div>
-
-                <div className="activity-item-time">
-                  {formatRelativeTime(log.created_at)}
-                </div>
-              </div>
-
-              <div className="activity-item-message">
-                {buildAuditDescription(log)}
-              </div>
+    <div className="activity-list">
+      {sortedLogs.map((log) => (
+        <div key={log.id} className="activity-item">
+          <div className="activity-item-top">
+            <div className="activity-item-title">
+              <strong>{log.action}</strong>
             </div>
-          ))}
+
+            <div className="activity-item-time">
+              {formatRelativeTime(log.created_at)}
+            </div>
+          </div>
+
+          <div className="activity-item-message">
+            {buildAuditDescription(log)}
+          </div>
         </div>
-      )}
+      ))}
     </div>
   );
 }

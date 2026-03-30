@@ -7,6 +7,7 @@ import { DashboardFilters, type HostFilterValue } from "@/components/dashboard/d
 import { DashboardSummary } from "@/components/dashboard/dashboard-summary";
 import { HostList } from "@/components/dashboard/host-list";
 import { JobsPanel } from "@/components/dashboard/jobs-panel";
+import { CollapsiblePanel } from "@/components/ui/collapsible-panel";
 import { getAgents, getAuditLogs, getHosts, getJobs, getLatestMetrics } from "@/lib/api";
 import { isOlderThan } from "@/lib/time";
 import type { Agent, AuditLog, Host, HostLatestMetric, Job } from "@/lib/types";
@@ -368,8 +369,13 @@ export function DashboardClient({
                 </div>
 
                 <div className="right-column">
-                    <JobsPanel jobs={jobs} />
-                    <AuditPanel logs={auditLogs} />
+                    <CollapsiblePanel title="Recent jobs" count={jobs.length} defaultOpen={false}>
+                        <JobsPanel jobs={jobs} />
+                    </CollapsiblePanel>
+
+                    <CollapsiblePanel title="Audit logs" count={auditLogs.length} defaultOpen={false}>
+                        <AuditPanel logs={auditLogs} />
+                    </CollapsiblePanel>
                 </div>
             </div>
         </>
