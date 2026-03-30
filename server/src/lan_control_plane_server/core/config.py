@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     rest_api_key: str = Field(default="dev-rest-api-key", alias="REST_API_KEY")
     client_token: str = Field(default="dev-client-token", alias="CLIENT_TOKEN")
     agent_token: str = Field(default="change-me-agent-token", alias="AGENT_TOKEN")
+    wol_broadcast_ip: str = Field(default="255.255.255", alias="WOL_BROADCAST_IP")
+    wol_port: int = Field(default=9, alias="WOL_PORT")
 
 
 @lru_cache
