@@ -1,0 +1,18 @@
+<service>
+  <id>LanControlPlaneAgent</id>
+  <name>Lan Control Plane Agent</name>
+  <description>LAN Control Plane Agent</description>
+
+  <executable>C:\Program Files\LanControlPlaneAgent\.venv\Scripts\python.exe</executable>
+  <arguments>-m lan_control_plane_agent.main</arguments>
+
+  <workingdirectory>C:\Program Files\LanControlPlaneAgent\agent</workingdirectory>
+
+  <logpath>C:\ProgramData\LanControlPlaneAgent\logs</logpath>
+  <log mode="roll" />
+
+  <onfailure action="restart" delay="5 sec" />
+  <startmode>Automatic</startmode>
+
+  <env name="AGENT_ENV_FILE" value="C:\Program Files\LanControlPlaneAgent\agent.env" />
+</service>
