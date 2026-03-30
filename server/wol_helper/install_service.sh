@@ -8,7 +8,7 @@ SERVICE_DEST="/etc/systemd/system/${SERVICE_NAME}.service"
 
 echo "==> Installing wakeonlan if missing"
 if ! command -v wakeonlan >/dev/null 2>&1; then
-  sudo pacman -Sy --noconfirm wakeonlan
+  sudo apt-get install wakeonlan -y
 fi
 
 echo "==> Creating install directory"
