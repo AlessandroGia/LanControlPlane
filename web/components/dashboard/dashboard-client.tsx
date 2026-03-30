@@ -54,7 +54,6 @@ export function DashboardClient({
     }, []);
 
     const refreshData = useCallback(async (): Promise<void> => {
-        console.log("Refreshing dashboard data");
         if (refreshInFlightRef.current) {
             return;
         }
@@ -62,25 +61,51 @@ export function DashboardClient({
         refreshInFlightRef.current = true;
 
         try {
-            const [
-                updatedHosts,
-                updatedJobs,
-                updatedAgents,
-                updatedAuditLogs,
-                updatedLatestMetrics,
-            ] = await Promise.all([
+            const criticalResults = await Promise.allSettled([
                 getHosts(),
                 getJobs(),
                 getAgents(),
-                getAuditLogs(),
                 getLatestMetrics(),
             ]);
 
-            setHosts(updatedHosts);
-            setJobs(updatedJobs);
-            setAgents(updatedAgents);
-            setAuditLogs(updatedAuditLogs);
-            setLatestMetrics(updatedLatestMetrics);
+            const [hostsResult, jobsResult, agentsResult, latestMetricsResult] = criticalResults;
+
+            if (hostsResult.status === "fulfilled") {
+                setHosts(hostsResult.value);
+            } else {
+                console.error("Failed to refresh hosts", hostsResult.reason);
+            }
+
+            if (jobsResult.status === "fulfilled") {
+                setJobs(jobsResult.value);
+            } else {
+                console.error("Failed to refresh jobs", jobsResult.reason);
+            }
+
+            if (agentsResult.status === "fulfilled") {
+                setAgents(agentsResult.value);
+            } else {
+                console.error("Failed to refresh agents", agentsResult.reason);
+            }
+
+            if (latestMetricsResult.status === "fulfilled") {
+                setLatestMetrics(latestMetricsResult.value);
+            } else {
+                console.error("Failed to refresh latest metrics", latestMetricsResult.reason);
+            }
+
+            const auditLogsResult = await Promise.race([
+                getAuditLogs().then((value) => ({ ok: true as const, value })),
+                new Promise<{ ok: false; reason: string }>((resolve) =>
+                    window.setTimeout(() => resolve({ ok: false, reason: "timeout" }), 3000),
+                ),
+            ]);
+
+            if (auditLogsResult.ok) {
+                setAuditLogs(auditLogsResult.value);
+            } else {
+                console.warn("Skipping audit logs refresh:", auditLogsResult.reason);
+            }
         } catch (error) {
             console.error("Failed to refresh dashboard data", error);
         } finally {
