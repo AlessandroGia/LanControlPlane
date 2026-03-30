@@ -476,3 +476,82 @@ button:disabled {
 .dashboard-filter-select {
   min-width: 180px;
 }
+
+.panel-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.9rem;
+}
+
+.panel-empty-state {
+  font-size: 0.92rem;
+  opacity: 0.75;
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.activity-item {
+  padding: 0.8rem 0.9rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.activity-item-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.activity-item-title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  font-size: 0.95rem;
+}
+
+.activity-item-time {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+.activity-item-message {
+  font-size: 0.88rem;
+  opacity: 0.8;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.status-pill.pending {
+  opacity: 0.85;
+}
+
+.status-pill.running {
+  opacity: 0.95;
+}
+
+.status-pill.completed {
+  opacity: 0.95;
+}
+
+.status-pill.failed {
+  opacity: 0.95;
+}
