@@ -21,7 +21,9 @@ export async function getLatestMetrics(cookieHeader?: string): Promise<HostLates
 }
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${config.internalApiBaseUrl}${path}`, {
+  const baseUrl = config.getApiBaseUrl();
+
+  const response = await fetch(`${baseUrl}${path}`, {
     ...init,
     credentials: "include",
     headers: {
