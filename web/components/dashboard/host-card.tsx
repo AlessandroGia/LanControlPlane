@@ -89,11 +89,10 @@ export function HostCard({
                 CPU: {latestMetric.cpu_usage.toFixed(1)}% · RAM: {latestMetric.memory_usage.toFixed(1)}% · Uptime:{" "}
                 {formatUptime(latestMetric.uptime_seconds)}
               </div>
-              <div className={`host-meta ${metricStale ? "stale-text" : ""}`}>
-                {hydrated
-                  ? `Metrics updated ${formatRelativeTime(latestMetric.collected_at)}${metricStale ? " · stale" : ""}`
-                  : "Metrics updated —"}
-              </div>
+
+              {metricStale ? (
+                <div className="host-meta stale-text">Metrics stale</div>
+              ) : null}
             </>
           ) : (
             <div className="host-meta">Metrics: —</div>
