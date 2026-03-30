@@ -16,4 +16,6 @@ def normalize_mac_address(mac_address: str | None) -> str | None:
     except ValueError as exc:
         raise ValueError(f"Invalid MAC address: {mac_address}") from exc
 
+    parts = [part.upper() for part in parts]
+
     return ":".join(parts)
