@@ -18,7 +18,7 @@ LOGGER = logging.getLogger(__name__)
 def normalize_mac_address(mac_address: str | None) -> str | None:
     if mac_address is None:
         return None
-    return mac_address.strip().lower().replace("-", ":")
+    return mac_address.strip().lower().replace("-", ":").upper()
 
 async def heartbeat_loop(
     websocket: websockets.ClientConnection,
