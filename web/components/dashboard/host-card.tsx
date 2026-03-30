@@ -1,5 +1,8 @@
+"use client";
+
 import { formatRelativeTime, isOlderThan } from "@/lib/time";
 import type { Agent, Host, HostLatestMetric } from "@/lib/types";
+import { useHydrated } from "@/lib/use-hydrated";
 import Link from "next/link";
 
 type HostCardProps = {
@@ -47,10 +50,14 @@ export function HostCard({
   actionsDisabled = false,
   pendingCommand,
 }: HostCardProps) {
+  const hydrated = useHydrated();
   const hostBusy = Boolean(pendingCommand);
 
-  const metricStale = latestMetric ? isOlderThan(latestMetric.collected_at, 120) : false;
-  const agentLastSeenStale = agent?.last_seen_at ? isOlderThan(agent.last_seen_at, 60) : true;
+  const metricStale =
+    hydrated && latestMetric ? isOlderThan(latestMetric.collected_at, 120) : false;
+
+  const agentLastSeenStale =
+    hydrated && agent?.last_seen_at ? isOlderThan(agent.last_seen_at, 60) : false;
 
   return (
     <div className="host-card">
@@ -70,8 +77,9 @@ export function HostCard({
 
           {agent?.last_seen_at ? (
             <div className={`host-meta ${agentLastSeenStale ? "stale-text" : ""}`}>
-              Agent last seen {formatRelativeTime(agent.last_seen_at)}
-              {agentLastSeenStale ? " · stale" : ""}
+              {hydrated
+                ? `Agent last seen ${formatRelativeTime(agent.last_seen_at)}${agentLastSeenStale ? " · stale" : ""}`
+                : "Agent last seen —"}
             </div>
           ) : (
             <div className="host-meta">Agent last seen: —</div>
@@ -84,8 +92,9 @@ export function HostCard({
                 {formatUptime(latestMetric.uptime_seconds)}
               </div>
               <div className={`host-meta ${metricStale ? "stale-text" : ""}`}>
-                Metrics updated {formatRelativeTime(latestMetric.collected_at)}
-                {metricStale ? " · stale" : ""}
+                {hydrated
+                  ? `Metrics updated ${formatRelativeTime(latestMetric.collected_at)}${metricStale ? " · stale" : ""}`
+                  : "Metrics updated —"}
               </div>
             </>
           ) : (
