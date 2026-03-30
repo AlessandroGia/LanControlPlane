@@ -630,3 +630,37 @@ button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
 }
+
+.host-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.host-card-sortable {
+  position: relative;
+}
+
+.host-card-sortable.dragging {
+  z-index: 10;
+  opacity: 0.9;
+}
+
+.host-card-drag-handle {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  z-index: 2;
+  padding: 0.35rem 0.45rem;
+  border-radius: 10px;
+  cursor: grab;
+  user-select: none;
+  font-size: 0.95rem;
+  line-height: 1;
+  opacity: 0.7;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.host-card-drag-handle:active {
+  cursor: grabbing;
+}
