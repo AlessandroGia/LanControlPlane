@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, or_, select
 from sqlalchemy.orm import Session
 
 from lan_control_plane_server.db.models import Session as UserSession
@@ -17,6 +17,15 @@ class SessionRepository:
         session_token_hash: str,
         expires_at: datetime,
     ) -> UserSession:
+        now = datetime.now(UTC)
+        self.session.execute(
+            delete(UserSession).where(
+                or_(
+                    UserSession.expires_at <= now,
+                    UserSession.revoked_at.is_not(None),
+                )
+            )
+        )
         db_session = UserSession(
             user_id=user_id,
             session_token_hash=session_token_hash,

@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from logging.config import fileConfig
 
-from lan_control_plane_server.core.config import get_settings
-from lan_control_plane_server.db import models  # noqa: F401
-from lan_control_plane_server.db.base import Base
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
+from lan_control_plane_server.core.config import get_settings
+from lan_control_plane_server.db import models  # noqa: F401
+from lan_control_plane_server.db.base import Base
 
 config = context.config
 

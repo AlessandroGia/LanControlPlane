@@ -14,6 +14,16 @@ function buildHeaders(): HeadersInit {
   };
 }
 
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    statusText: string,
+  ) {
+    super(`Request failed: ${status} ${statusText}`);
+    this.name = "ApiError";
+  }
+}
+
 export async function getLatestMetrics(cookieHeader?: string): Promise<HostLatestMetric[]> {
   return fetchJson("/metrics/latest", {
     headers: cookieHeader ? { Cookie: cookieHeader } : undefined,
@@ -34,7 +44,7 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+    throw new ApiError(response.status, response.statusText);
   }
 
   return (await response.json()) as T;
@@ -78,7 +88,7 @@ export async function getHost(
   hostName: string,
   cookieHeader?: string,
 ): Promise<Host> {
-  return fetchJson(`/hosts/${hostName}`, {
+  return fetchJson(`/hosts/${encodeURIComponent(hostName)}`, {
     headers: cookieHeader ? { Cookie: cookieHeader } : undefined,
   });
 }
@@ -87,7 +97,7 @@ export async function getHostMetrics(
   hostName: string,
   cookieHeader?: string,
 ): Promise<HostMetricRead[]> {
-  return fetchJson(`/hosts/${hostName}/metrics`, {
+  return fetchJson(`/hosts/${encodeURIComponent(hostName)}/metrics`, {
     headers: cookieHeader ? { Cookie: cookieHeader } : undefined,
   });
 }

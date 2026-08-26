@@ -1,8 +1,9 @@
-from lan_control_plane_server.db.models import Host
-from lan_control_plane_server.repositories.host_repository import HostRepository
 from lan_control_plane_shared.enums.host_state import HostState
 from lan_control_plane_shared.protocol.server_messages import HostSnapshotItem
 from sqlalchemy.orm import Session
+
+from lan_control_plane_server.db.models import Host
+from lan_control_plane_server.repositories.host_repository import HostRepository
 
 
 class HostService:
@@ -25,7 +26,12 @@ class HostService:
                 state=HostState.ONLINE.value,
             )
 
-        return self.host_repository.update_state(existing, HostState.ONLINE.value)
+        return self.host_repository.update_registration_info(
+            existing,
+            hostname=hostname,
+            ip_address=ip_address,
+            state=HostState.ONLINE.value,
+        )
 
     def mark_host_offline(self, name: str) -> None:
         host = self.host_repository.get_by_name(name)
@@ -41,6 +47,12 @@ class HostService:
 
         return self.host_repository.update_state(host, HostState.WAKING.value)
 
+    def mark_host_shutting_down(self, name: str) -> Host | None:
+        host = self.host_repository.get_by_name(name)
+        if host is None:
+            return None
+        return self.host_repository.update_state(host, HostState.SHUTTING_DOWN.value)
+
     def get_host_by_name(self, name: str) -> Host | None:
         return self.host_repository.get_by_name(name)
 
@@ -49,6 +61,9 @@ class HostService:
 
     def get_hosts(self) -> list[Host]:
         return self.host_repository.get_all()
+
+    def reconcile_after_server_restart(self) -> None:
+        self.host_repository.mark_managed_hosts_offline()
 
     def update_host_network_info(
         self,

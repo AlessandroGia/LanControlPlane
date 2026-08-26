@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
-from lan_control_plane_server.api.deps import require_api_key
+
+from lan_control_plane_server.api.deps import get_current_user_from_session
 from lan_control_plane_server.db.session import SessionLocal
 from lan_control_plane_server.schemas.agent import AgentRead
 from lan_control_plane_server.services.agent_service import AgentService
 from lan_control_plane_server.services.host_service import HostService
-from lan_control_plane_server.api.deps import get_current_user_from_session
-from lan_control_plane_server.db.models import User
 
 router = APIRouter(
     prefix="/agents",
@@ -15,7 +14,7 @@ router = APIRouter(
 
 
 @router.get("", response_model=list[AgentRead])
-async def get_agents() -> list[AgentRead]:
+def get_agents() -> list[AgentRead]:
     session = SessionLocal()
     try:
         agent_service = AgentService(session)
@@ -46,7 +45,7 @@ async def get_agents() -> list[AgentRead]:
 
 
 @router.get("/{host_name}", response_model=AgentRead)
-async def get_agent(host_name: str) -> AgentRead:
+def get_agent(host_name: str) -> AgentRead:
     session = SessionLocal()
     try:
         agent_service = AgentService(session)

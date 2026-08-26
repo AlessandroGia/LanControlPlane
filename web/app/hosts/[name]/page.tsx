@@ -1,22 +1,22 @@
 import { LogoutButton } from "@/components/auth/logout-button";
 import { HostDetailAutoRefresh } from "@/components/hosts/host-detail-auto-refresh";
 import { HostMetricsChart } from "@/components/hosts/host-metrics-chart";
-import { getAgents, getHost, getHostMetrics, getMe } from "@/lib/api";
+import { ApiError, getAgents, getHost, getHostMetrics, getMe } from "@/lib/api";
 import { formatLocalDateTime } from "@/lib/time";
 import type { HostMetricRead } from "@/lib/types";
 import { cookies } from "next/headers";
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 function buildCookieHeader(
     cookieStore: Awaited<ReturnType<typeof cookies>>,
 ): string | undefined {
-    const all = cookieStore.getAll();
-    if (all.length === 0) {
+    const sessionCookie = cookieStore.get("lcp_session");
+    if (!sessionCookie) {
         return undefined;
     }
 
-    return all.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
+    return `${sessionCookie.name}=${sessionCookie.value}`;
 }
 
 function formatUptime(totalSeconds: number): string {
@@ -66,11 +66,26 @@ export default async function HostDetailPage({ params }: PageProps) {
         redirect("/login");
     }
 
-    const [host, metrics, agents] = await Promise.all([
-        getHost(name, cookieHeader),
+    let host: Awaited<ReturnType<typeof getHost>>;
+    try {
+        host = await getHost(name, cookieHeader);
+    } catch (error) {
+        if (error instanceof ApiError && error.status === 404) {
+            notFound();
+        }
+        throw error;
+    }
+
+    const [metricsResult, agentsResult] = await Promise.allSettled([
         getHostMetrics(name, cookieHeader),
         getAgents(cookieHeader),
     ]);
+    const metrics = metricsResult.status === "fulfilled" ? metricsResult.value : [];
+    const agents = agentsResult.status === "fulfilled" ? agentsResult.value : [];
+    const dataWarning =
+        metricsResult.status === "rejected" || agentsResult.status === "rejected"
+            ? "Some host details are temporarily unavailable. This page will retry automatically."
+            : null;
 
     const agent = agents.find((item) => item.host_name === host.name);
     const latestMetric = getLatestMetric(metrics);
@@ -91,6 +106,12 @@ export default async function HostDetailPage({ params }: PageProps) {
 
                 <LogoutButton />
             </div>
+
+            {dataWarning ? (
+                <div className="dashboard-alert" role="alert">
+                    <span>{dataWarning}</span>
+                </div>
+            ) : null}
 
             <div className="dashboard-grid">
                 <div className="left-column">

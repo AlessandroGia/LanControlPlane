@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-AGENT_DIR="$SCRIPT_DIR"
+AGENT_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 REPO_ROOT="$(cd -- "$AGENT_DIR/.." && pwd)"
 
 INSTALL_DIR="/opt/lan-control-plane-agent"
@@ -24,13 +24,21 @@ if [ ! -d "$REPO_ROOT/shared/src" ]; then
   exit 1
 fi
 
+python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 12) else 1)' || {
+  echo "Python 3.12 or newer is required." >&2
+  exit 1
+}
+
 echo "==> Creating install directory"
 sudo mkdir -p "$INSTALL_DIR"
 
 echo "==> Copying agent and shared sources"
 sudo rm -rf "$INSTALL_DIR/agent" "$INSTALL_DIR/shared"
-sudo cp -r "$AGENT_DIR" "$INSTALL_DIR/agent"
-sudo cp -r "$REPO_ROOT/shared" "$INSTALL_DIR/shared"
+sudo mkdir -p "$INSTALL_DIR/agent" "$INSTALL_DIR/shared"
+sudo cp "$AGENT_DIR/pyproject.toml" "$AGENT_DIR/uv.lock" "$INSTALL_DIR/agent/"
+sudo cp -r "$AGENT_DIR/src" "$INSTALL_DIR/agent/src"
+sudo cp "$REPO_ROOT/shared/pyproject.toml" "$INSTALL_DIR/shared/"
+sudo cp -r "$REPO_ROOT/shared/src" "$INSTALL_DIR/shared/src"
 
 echo "==> Preparing agent env file"
 if [ ! -f "$INSTALL_DIR/agent.env" ]; then
@@ -41,6 +49,7 @@ if [ ! -f "$INSTALL_DIR/agent.env" ]; then
     exit 1
   fi
 fi
+sudo chmod 600 "$INSTALL_DIR/agent.env"
 
 echo "==> Creating virtual environment"
 sudo python3 -m venv "$INSTALL_DIR/.venv"

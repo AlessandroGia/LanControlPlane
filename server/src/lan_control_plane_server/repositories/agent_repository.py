@@ -1,8 +1,9 @@
 from datetime import UTC, datetime
 
-from lan_control_plane_server.db.models import Agent
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+
+from lan_control_plane_server.db.models import Agent
 
 
 class AgentRepository:
@@ -11,6 +12,10 @@ class AgentRepository:
 
     def get_by_host_id(self, host_id: str) -> Agent | None:
         statement = select(Agent).where(Agent.host_id == host_id)
+        return self.session.scalar(statement)
+
+    def get_by_token_hash(self, token_hash: str) -> Agent | None:
+        statement = select(Agent).where(Agent.token_hash == token_hash).limit(1)
         return self.session.scalar(statement)
 
     def get_all(self) -> list[Agent]:
@@ -40,10 +45,8 @@ class AgentRepository:
         self,
         agent: Agent,
         *,
-        token_hash: str,
         version: str,
     ) -> Agent:
-        agent.token_hash = token_hash
         agent.version = version
         agent.last_seen_at = datetime.now(UTC)
         self.session.add(agent)

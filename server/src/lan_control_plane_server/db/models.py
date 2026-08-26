@@ -1,9 +1,10 @@
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from lan_control_plane_server.db.base import Base
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from lan_control_plane_server.db.base import Base
 
 
 def utc_now() -> datetime:
@@ -21,11 +22,13 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(50), nullable=False, default="admin")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
     sessions: Mapped[list["Session"]] = relationship(
-    back_populates="user",
-    cascade="all, delete-orphan",
-)
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
 
 
 class Host(Base):
@@ -38,7 +41,9 @@ class Host(Base):
     mac_address: Mapped[str | None] = mapped_column(String(17), nullable=True)
     state: Mapped[str] = mapped_column(String(50), nullable=False, default="unknown")
     is_managed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
@@ -69,13 +74,17 @@ class Agent(Base):
 
 class Job(Base):
     __tablename__ = "jobs"
+    __table_args__ = (Index("ix_jobs_requested_at", "requested_at"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     host_id: Mapped[str] = mapped_column(ForeignKey("hosts.id"), nullable=False)
+    request_id: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True, index=True)
     command: Mapped[str] = mapped_column(String(50), nullable=False)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
     requested_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
+    requested_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     result_message: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -85,19 +94,23 @@ class Job(Base):
 
 class HostMetric(Base):
     __tablename__ = "host_metrics"
+    __table_args__ = (Index("ix_host_metrics_host_collected_at", "host_id", "collected_at"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     host_id: Mapped[str] = mapped_column(ForeignKey("hosts.id"), nullable=False)
     cpu_usage: Mapped[float] = mapped_column(nullable=False)
     memory_usage: Mapped[float] = mapped_column(nullable=False)
     uptime_seconds: Mapped[int] = mapped_column(Integer, nullable=False)
-    collected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
+    collected_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
 
     host: Mapped["Host"] = relationship(back_populates="metrics")
 
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
+    __table_args__ = (Index("ix_audit_logs_created_at", "created_at"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     actor_type: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -106,7 +119,9 @@ class AuditLog(Base):
     target_type: Mapped[str] = mapped_column(String(50), nullable=False)
     target_id: Mapped[str] = mapped_column(String(255), nullable=False)
     metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
 
 
 class Session(Base):

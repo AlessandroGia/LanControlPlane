@@ -1,6 +1,10 @@
+from datetime import UTC, datetime, timedelta
+
+from sqlalchemy.orm import Session
+
+from lan_control_plane_server.core.config import get_settings
 from lan_control_plane_server.db.models import Host, HostMetric
 from lan_control_plane_server.repositories.host_metric_repository import HostMetricRepository
-from sqlalchemy.orm import Session
 
 
 class HostMetricService:
@@ -15,6 +19,8 @@ class HostMetricService:
         memory_usage: float,
         uptime_seconds: int,
     ) -> HostMetric:
+        retention_cutoff = datetime.now(UTC) - timedelta(days=get_settings().metrics_retention_days)
+        self.host_metric_repository.prune_for_host(host_id, before=retention_cutoff)
         return self.host_metric_repository.create(
             host_id=host_id,
             cpu_usage=cpu_usage,
@@ -27,4 +33,3 @@ class HostMetricService:
 
     def get_latest_metrics_for_all_hosts(self) -> list[tuple[Host, HostMetric]]:
         return self.host_metric_repository.get_latest_for_all_hosts()
-

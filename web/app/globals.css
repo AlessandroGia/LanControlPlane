@@ -48,6 +48,14 @@ button:disabled {
   cursor: not-allowed;
 }
 
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+a:focus-visible {
+  outline: 3px solid rgba(74, 163, 255, 0.45);
+  outline-offset: 2px;
+}
+
 .container {
   max-width: 1280px;
   margin: 0 auto;
@@ -710,4 +718,126 @@ button:disabled {
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
   border-color: rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.05);
+}
+
+.dashboard-status {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.connection-dot {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  margin-right: 0.5rem;
+  border-radius: 999px;
+  background: var(--muted);
+}
+
+.connection-dot.ready {
+  background: var(--success);
+  box-shadow: 0 0 0 4px rgba(46, 204, 113, 0.12);
+}
+
+.connection-dot.connecting,
+.connection-dot.reconnecting {
+  background: var(--warning);
+  animation: connection-pulse 1.4s ease-in-out infinite;
+}
+
+.connection-dot.disconnected {
+  background: var(--danger);
+}
+
+@keyframes connection-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.dashboard-alert,
+.dashboard-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+}
+
+.dashboard-alert {
+  border: 1px solid rgba(231, 76, 60, 0.45);
+  background: rgba(231, 76, 60, 0.1);
+  color: #ffd0cb;
+}
+
+.dashboard-notice {
+  border: 1px solid rgba(74, 163, 255, 0.35);
+  background: rgba(74, 163, 255, 0.08);
+  color: #cde7ff;
+}
+
+.confirmation-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(3, 6, 18, 0.76);
+  backdrop-filter: blur(6px);
+}
+
+.confirmation-dialog {
+  width: min(100%, 460px);
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--panel);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+}
+
+.confirmation-dialog h2 {
+  margin: 0 0 0.65rem;
+  text-transform: capitalize;
+}
+
+.confirmation-dialog p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.confirmation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin-top: 1.25rem;
+}
+
+.danger-confirm-button {
+  border-color: rgba(231, 76, 60, 0.55);
+  background: rgba(231, 76, 60, 0.18);
+  color: #ffd0cb;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -62,6 +62,8 @@ export function LoginForm() {
                         onChange={(event) => setUsername(event.target.value)}
                         autoComplete="username"
                         placeholder="Enter your username"
+                        required
+                        maxLength={255}
                     />
                 </label>
 
@@ -74,12 +76,23 @@ export function LoginForm() {
                         onChange={(event) => setPassword(event.target.value)}
                         autoComplete="current-password"
                         placeholder="Enter your password"
+                        required
+                        maxLength={1024}
                     />
                 </label>
 
-                {error ? <div className="auth-error">{error}</div> : null}
+                {error ? (
+                    <div className="auth-error" role="alert">
+                        {error}
+                    </div>
+                ) : null}
 
-                <button className="auth-submit" type="submit" disabled={isSubmitting}>
+                <button
+                    className="auth-submit"
+                    type="submit"
+                    disabled={isSubmitting}
+                    aria-busy={isSubmitting}
+                >
                     {isSubmitting ? "Signing in..." : "Sign in"}
                 </button>
             </div>

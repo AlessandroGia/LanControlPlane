@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { AuditPanel } from "@/components/dashboard/audit-panel";
 import { DashboardFilters, type HostFilterValue } from "@/components/dashboard/dashboard-filters";
@@ -12,10 +13,16 @@ import { getAgents, getAuditLogs, getHosts, getJobs, getLatestMetrics } from "@/
 import { isOlderThan } from "@/lib/time";
 import type { Agent, AuditLog, Host, HostLatestMetric, Job } from "@/lib/types";
 import { useHydrated } from "@/lib/use-hydrated";
-import { ControlPlaneWsClient, type WsServerEvent } from "@/lib/ws";
+import {
+    ControlPlaneWsClient,
+    type WsConnectionState,
+    type WsServerEvent,
+} from "@/lib/ws";
 
 
 type DashboardClientProps = {
+    currentUser: { username: string; role: string };
+    initialError?: string | null;
     hosts: Host[];
     jobs: Job[];
     agents: Agent[];
@@ -26,20 +33,30 @@ type DashboardClientProps = {
 type PendingCommandMap = Record<string, "wake" | "shutdown" | "reboot" | undefined>;
 
 export function DashboardClient({
+    currentUser,
+    initialError = null,
     hosts: initialHosts,
     jobs: initialJobs,
     agents: initialAgents,
     auditLogs: initialAuditLogs,
     latestMetrics: initialLatestMetrics,
 }: DashboardClientProps) {
+    const router = useRouter();
     const [hosts, setHosts] = useState<Host[]>(initialHosts);
     const [jobs, setJobs] = useState<Job[]>(initialJobs);
     const [agents, setAgents] = useState<Agent[]>(initialAgents);
     const [auditLogs, setAuditLogs] = useState<AuditLog[]>(initialAuditLogs);
     const [latestMetrics, setLatestMetrics] = useState<HostLatestMetric[]>(initialLatestMetrics);
 
-    const [isWsReady, setIsWsReady] = useState(false);
+    const [connectionState, setConnectionState] =
+        useState<WsConnectionState>("connecting");
+    const [refreshError, setRefreshError] = useState<string | null>(initialError);
+    const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
     const [pendingCommands, setPendingCommands] = useState<PendingCommandMap>({});
+    const [confirmation, setConfirmation] = useState<{
+        hostName: string;
+        command: "shutdown" | "reboot";
+    } | null>(null);
 
     const wsClientRef = useRef<ControlPlaneWsClient | null>(null);
 
@@ -72,40 +89,43 @@ export function DashboardClient({
         fastRefreshInFlightRef.current = true;
 
         try {
-            const results = await Promise.allSettled([
-                getHosts(),
-                getAgents(),
-                getLatestMetrics(),
-            ]);
+            do {
+                fastRefreshPendingRef.current = false;
+                const results = await Promise.allSettled([
+                    getHosts(),
+                    getAgents(),
+                    getLatestMetrics(),
+                ]);
 
-            const [hostsResult, agentsResult, metricsResult] = results;
+                const [hostsResult, agentsResult, metricsResult] = results;
 
-            if (hostsResult.status === "fulfilled") {
-                setHosts(hostsResult.value);
-            } else {
-                console.error("Failed to refresh hosts", hostsResult.reason);
-            }
+                if (hostsResult.status === "fulfilled") {
+                    setHosts(hostsResult.value);
+                } else {
+                    console.error("Failed to refresh hosts", hostsResult.reason);
+                }
 
-            if (agentsResult.status === "fulfilled") {
-                setAgents(agentsResult.value);
-            } else {
-                console.error("Failed to refresh agents", agentsResult.reason);
-            }
+                if (agentsResult.status === "fulfilled") {
+                    setAgents(agentsResult.value);
+                } else {
+                    console.error("Failed to refresh agents", agentsResult.reason);
+                }
 
-            if (metricsResult.status === "fulfilled") {
-                setLatestMetrics(metricsResult.value);
-            } else {
-                console.error("Failed to refresh latest metrics", metricsResult.reason);
-            }
-        } catch (error) {
-            console.error("Failed to refresh fast dashboard data", error);
+                if (metricsResult.status === "fulfilled") {
+                    setLatestMetrics(metricsResult.value);
+                } else {
+                    console.error("Failed to refresh latest metrics", metricsResult.reason);
+                }
+
+                if (results.some((result) => result.status === "fulfilled")) {
+                    setRefreshError(null);
+                    setLastUpdatedAt(new Date());
+                } else {
+                    setRefreshError("Unable to refresh host data. Retrying automatically.");
+                }
+            } while (fastRefreshPendingRef.current);
         } finally {
             fastRefreshInFlightRef.current = false;
-
-            if (fastRefreshPendingRef.current) {
-                fastRefreshPendingRef.current = false;
-                void refreshFastData();
-            }
         }
     }, []);
 
@@ -118,54 +138,57 @@ export function DashboardClient({
         fullRefreshInFlightRef.current = true;
 
         try {
-            const results = await Promise.allSettled([
-                getHosts(),
-                getJobs(),
-                getAgents(),
-                getAuditLogs(),
-                getLatestMetrics(),
-            ]);
+            do {
+                fullRefreshPendingRef.current = false;
+                const results = await Promise.allSettled([
+                    getHosts(),
+                    getJobs(),
+                    getAgents(),
+                    getAuditLogs(),
+                    getLatestMetrics(),
+                ]);
 
-            const [hostsResult, jobsResult, agentsResult, auditLogsResult, metricsResult] = results;
+                const [hostsResult, jobsResult, agentsResult, auditLogsResult, metricsResult] = results;
 
-            if (hostsResult.status === "fulfilled") {
-                setHosts(hostsResult.value);
-            } else {
-                console.error("Failed to refresh hosts", hostsResult.reason);
-            }
+                if (hostsResult.status === "fulfilled") {
+                    setHosts(hostsResult.value);
+                } else {
+                    console.error("Failed to refresh hosts", hostsResult.reason);
+                }
 
-            if (jobsResult.status === "fulfilled") {
-                setJobs(jobsResult.value);
-            } else {
-                console.error("Failed to refresh jobs", jobsResult.reason);
-            }
+                if (jobsResult.status === "fulfilled") {
+                    setJobs(jobsResult.value);
+                } else {
+                    console.error("Failed to refresh jobs", jobsResult.reason);
+                }
 
-            if (agentsResult.status === "fulfilled") {
-                setAgents(agentsResult.value);
-            } else {
-                console.error("Failed to refresh agents", agentsResult.reason);
-            }
+                if (agentsResult.status === "fulfilled") {
+                    setAgents(agentsResult.value);
+                } else {
+                    console.error("Failed to refresh agents", agentsResult.reason);
+                }
 
-            if (auditLogsResult.status === "fulfilled") {
-                setAuditLogs(auditLogsResult.value);
-            } else {
-                console.error("Failed to refresh audit logs", auditLogsResult.reason);
-            }
+                if (auditLogsResult.status === "fulfilled") {
+                    setAuditLogs(auditLogsResult.value);
+                } else {
+                    console.error("Failed to refresh audit logs", auditLogsResult.reason);
+                }
 
-            if (metricsResult.status === "fulfilled") {
-                setLatestMetrics(metricsResult.value);
-            } else {
-                console.error("Failed to refresh latest metrics", metricsResult.reason);
-            }
-        } catch (error) {
-            console.error("Failed to refresh full dashboard data", error);
+                if (metricsResult.status === "fulfilled") {
+                    setLatestMetrics(metricsResult.value);
+                } else {
+                    console.error("Failed to refresh latest metrics", metricsResult.reason);
+                }
+
+                if (results.some((result) => result.status === "fulfilled")) {
+                    setRefreshError(null);
+                    setLastUpdatedAt(new Date());
+                } else {
+                    setRefreshError("Unable to refresh dashboard data. Retrying automatically.");
+                }
+            } while (fullRefreshPendingRef.current);
         } finally {
             fullRefreshInFlightRef.current = false;
-
-            if (fullRefreshPendingRef.current) {
-                fullRefreshPendingRef.current = false;
-                void refreshFullData();
-            }
         }
     }, []);
 
@@ -182,12 +205,7 @@ export function DashboardClient({
 
     const handleWsEvent = useCallback(
         (event: WsServerEvent): void => {
-            if (event.type === "connected") {
-                return;
-            }
-
             if (event.type === "auth_ok") {
-                setIsWsReady(true);
                 void refreshFullData();
                 return;
             }
@@ -226,14 +244,18 @@ export function DashboardClient({
             }
 
             if (event.type === "error") {
-                console.error("WS server error:", event.message);
+                if (event.message === "Not authenticated") {
+                    router.push("/login");
+                    return;
+                }
+                setRefreshError(event.message);
             }
         },
-        [clearPendingForHost, refreshFullData, scheduleFastRefresh],
+        [clearPendingForHost, refreshFullData, router, scheduleFastRefresh],
     );
 
     useEffect(() => {
-        const client = new ControlPlaneWsClient(handleWsEvent);
+        const client = new ControlPlaneWsClient(handleWsEvent, setConnectionState);
         wsClientRef.current = client;
         client.connect();
 
@@ -242,7 +264,6 @@ export function DashboardClient({
         return () => {
             client.disconnect();
             wsClientRef.current = null;
-            setIsWsReady(false);
 
             if (scheduledFastRefreshRef.current !== null) {
                 window.clearTimeout(scheduledFastRefreshRef.current);
@@ -271,19 +292,23 @@ export function DashboardClient({
         };
     }, [refreshFullData]);
 
-    const actionsDisabled = useMemo(() => !isWsReady, [isWsReady]);
+    const actionsDisabled = useMemo(
+        () => connectionState !== "ready" || currentUser.role !== "admin",
+        [connectionState, currentUser.role],
+    );
 
     function sendCommand(hostName: string, command: "wake" | "shutdown" | "reboot"): void {
         if (!wsClientRef.current) {
             return;
         }
 
-        setPendingCommands((current) => ({
-            ...current,
-            [hostName]: command,
-        }));
+        const sent = wsClientRef.current.sendCommand(hostName, command);
+        if (!sent) {
+            setRefreshError("The live connection is unavailable. The command was not sent.");
+            return;
+        }
 
-        wsClientRef.current.sendCommand(hostName, command);
+        setPendingCommands((current) => ({ ...current, [hostName]: command }));
     }
 
     function handleWake(hostName: string): void {
@@ -291,11 +316,11 @@ export function DashboardClient({
     }
 
     function handleShutdown(hostName: string): void {
-        sendCommand(hostName, "shutdown");
+        setConfirmation({ hostName, command: "shutdown" });
     }
 
     function handleReboot(hostName: string): void {
-        sendCommand(hostName, "reboot");
+        setConfirmation({ hostName, command: "reboot" });
     }
 
     const filteredHosts = useMemo(() => {
@@ -324,13 +349,10 @@ export function DashboardClient({
                     return false;
                 }
 
-                const agentStale = agent?.last_seen_at
-                    ? isOlderThan(agent.last_seen_at, 60)
-                    : false;
+                const agentStale = !agent?.last_seen_at || isOlderThan(agent.last_seen_at, 60);
 
-                const metricStale = metric?.collected_at
-                    ? isOlderThan(metric.collected_at, 120)
-                    : false;
+                const metricStale =
+                    !metric?.collected_at || isOlderThan(metric.collected_at, 120);
 
                 return agentStale || metricStale;
             }
@@ -341,6 +363,32 @@ export function DashboardClient({
 
     return (
         <>
+            <section className="dashboard-status" aria-live="polite">
+                <div>
+                    <span className={`connection-dot ${connectionState}`} />
+                    Live connection: {connectionState}
+                </div>
+                <div>
+                    Signed in as {currentUser.username} ({currentUser.role})
+                    {lastUpdatedAt ? ` · Updated ${lastUpdatedAt.toLocaleTimeString()}` : ""}
+                </div>
+            </section>
+
+            {refreshError ? (
+                <div className="dashboard-alert" role="alert">
+                    <span>{refreshError}</span>
+                    <button type="button" onClick={() => void refreshFullData()}>
+                        Retry now
+                    </button>
+                </div>
+            ) : null}
+
+            {currentUser.role !== "admin" ? (
+                <div className="dashboard-notice">
+                    This account has read-only access. Host control actions require an administrator.
+                </div>
+            ) : null}
+
             <DashboardSummary
                 hosts={hosts}
                 agents={agents}
@@ -378,6 +426,38 @@ export function DashboardClient({
                     </CollapsiblePanel>
                 </div>
             </div>
+
+            {confirmation ? (
+                <div className="confirmation-backdrop" role="presentation">
+                    <section
+                        className="confirmation-dialog"
+                        role="alertdialog"
+                        aria-modal="true"
+                        aria-labelledby="confirmation-title"
+                    >
+                        <h2 id="confirmation-title">Confirm {confirmation.command}</h2>
+                        <p>
+                            Send <strong>{confirmation.command}</strong> to{" "}
+                            <strong>{confirmation.hostName}</strong>? This can interrupt active work.
+                        </p>
+                        <div className="confirmation-actions">
+                            <button type="button" onClick={() => setConfirmation(null)}>
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="danger-confirm-button"
+                                onClick={() => {
+                                    sendCommand(confirmation.hostName, confirmation.command);
+                                    setConfirmation(null);
+                                }}
+                            >
+                                Confirm {confirmation.command}
+                            </button>
+                        </div>
+                    </section>
+                </div>
+            ) : null}
         </>
     );
 }

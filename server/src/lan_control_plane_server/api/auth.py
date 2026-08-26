@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, HTTPException, Response, status
 
-from lan_control_plane_server.api.deps import get_current_user_from_session
-from lan_control_plane_server.db.models import User
+from lan_control_plane_server.api.deps import CurrentUser
+from lan_control_plane_server.core.config import get_settings
 from lan_control_plane_server.db.session import SessionLocal
 from lan_control_plane_server.schemas.auth import LoginRequest, UserMeRead
 from lan_control_plane_server.services.auth_service import AuthService
@@ -10,7 +10,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/login")
-async def login(payload: LoginRequest, response: Response) -> dict[str, str]:
+def login(payload: LoginRequest, response: Response) -> dict[str, str]:
+    settings = get_settings()
     session = SessionLocal()
     try:
         auth_service = AuthService(session)
@@ -32,18 +33,19 @@ async def login(payload: LoginRequest, response: Response) -> dict[str, str]:
         key="lcp_session",
         value=session_token,
         httponly=True,
-        secure=False,
+        secure=settings.cookie_secure,
         samesite="lax",
         path="/",
+        max_age=settings.access_token_expire_minutes * 60,
     )
     return {"status": "ok"}
 
 
 @router.post("/logout")
-async def logout(
+def logout(
     response: Response,
+    current_user: CurrentUser,
     lcp_session: str | None = Cookie(default=None),
-    current_user: User = Depends(get_current_user_from_session),
 ) -> dict[str, str]:
     del current_user
 
@@ -55,12 +57,19 @@ async def logout(
         finally:
             session.close()
 
-    response.delete_cookie(key="lcp_session", path="/")
+    settings = get_settings()
+    response.delete_cookie(
+        key="lcp_session",
+        path="/",
+        secure=settings.cookie_secure,
+        httponly=True,
+        samesite="lax",
+    )
     return {"status": "ok"}
 
 
 @router.get("/me", response_model=UserMeRead)
-async def me(current_user: User = Depends(get_current_user_from_session)) -> UserMeRead:
+def me(current_user: CurrentUser) -> UserMeRead:
     return UserMeRead(
         id=current_user.id,
         username=current_user.username,

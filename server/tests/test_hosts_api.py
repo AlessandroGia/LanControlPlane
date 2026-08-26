@@ -1,14 +1,11 @@
 from .helpers import create_host
 
-API_KEY_HEADER = {"X-API-Key": "dev-rest-api-key"}
 
-
-def test_patch_host_network_rejects_invalid_ip(client, db_session):
+def test_patch_host_network_rejects_invalid_ip(authenticated_client, db_session):
     create_host(db_session, name="desktop-casa", hostname="desktop-casa", state="online")
 
-    response = client.patch(
+    response = authenticated_client.patch(
         "/hosts/desktop-casa/network",
-        headers=API_KEY_HEADER,
         json={
             "ip_address": "not-an-ip",
             "mac_address": "AA:BB:CC:DD:EE:FF",
@@ -18,12 +15,11 @@ def test_patch_host_network_rejects_invalid_ip(client, db_session):
     assert response.status_code == 422
 
 
-def test_patch_host_network_normalizes_mac(client, db_session):
+def test_patch_host_network_normalizes_mac(authenticated_client, db_session):
     create_host(db_session, name="desktop-casa", hostname="desktop-casa", state="online")
 
-    response = client.patch(
+    response = authenticated_client.patch(
         "/hosts/desktop-casa/network",
-        headers=API_KEY_HEADER,
         json={
             "ip_address": "192.168.1.20",
             "mac_address": "aa-bb-cc-dd-ee-ff",
@@ -36,10 +32,10 @@ def test_patch_host_network_normalizes_mac(client, db_session):
     assert payload["mac_address"] == "AA:BB:CC:DD:EE:FF"
 
 
-def test_get_hosts_returns_hosts(client, db_session):
+def test_get_hosts_returns_hosts(authenticated_client, db_session):
     create_host(db_session, name="desktop-casa", hostname="desktop-casa", state="online")
 
-    response = client.get("/hosts", headers=API_KEY_HEADER)
+    response = authenticated_client.get("/hosts")
 
     assert response.status_code == 200
     payload = response.json()
@@ -49,7 +45,7 @@ def test_get_hosts_returns_hosts(client, db_session):
     assert payload[0]["state"] == "online"
 
 
-def test_get_host_returns_single_host(client, db_session):
+def test_get_host_returns_single_host(authenticated_client, db_session):
     create_host(
         db_session,
         name="desktop-casa",
@@ -59,7 +55,7 @@ def test_get_host_returns_single_host(client, db_session):
         mac_address="AA:BB:CC:DD:EE:FF",
     )
 
-    response = client.get("/hosts/desktop-casa", headers=API_KEY_HEADER)
+    response = authenticated_client.get("/hosts/desktop-casa")
 
     assert response.status_code == 200
     payload = response.json()
@@ -69,12 +65,11 @@ def test_get_host_returns_single_host(client, db_session):
     assert payload["mac_address"] == "AA:BB:CC:DD:EE:FF"
 
 
-def test_patch_host_network_updates_values(client, db_session):
+def test_patch_host_network_updates_values(authenticated_client, db_session):
     create_host(db_session, name="desktop-casa", hostname="desktop-casa", state="online")
 
-    response = client.patch(
+    response = authenticated_client.patch(
         "/hosts/desktop-casa/network",
-        headers=API_KEY_HEADER,
         json={
             "ip_address": "192.168.1.20",
             "mac_address": "AA:BB:CC:DD:EE:FF",
@@ -86,3 +81,30 @@ def test_patch_host_network_updates_values(client, db_session):
 
     assert payload["ip_address"] == "192.168.1.20"
     assert payload["mac_address"] == "AA:BB:CC:DD:EE:FF"
+
+
+def test_patch_host_network_preserves_omitted_field(authenticated_client, db_session):
+    create_host(
+        db_session,
+        name="desktop-casa",
+        hostname="desktop-casa",
+        ip_address="192.168.1.20",
+        mac_address="AA:BB:CC:DD:EE:FF",
+    )
+
+    response = authenticated_client.patch(
+        "/hosts/desktop-casa/network",
+        json={"ip_address": "192.168.1.21"},
+    )
+    assert response.status_code == 200
+    assert response.json()["ip_address"] == "192.168.1.21"
+    assert response.json()["mac_address"] == "AA:BB:CC:DD:EE:FF"
+
+
+def test_patch_host_network_requires_admin(viewer_client, db_session):
+    create_host(db_session, name="desktop-casa", hostname="desktop-casa")
+    response = viewer_client.patch(
+        "/hosts/desktop-casa/network",
+        json={"ip_address": "192.168.1.21"},
+    )
+    assert response.status_code == 403

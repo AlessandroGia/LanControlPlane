@@ -7,12 +7,12 @@ import { redirect } from "next/navigation";
 function buildCookieHeader(
   cookieStore: Awaited<ReturnType<typeof cookies>>,
 ): string | undefined {
-  const all = cookieStore.getAll();
-  if (all.length === 0) {
+  const sessionCookie = cookieStore.get("lcp_session");
+  if (!sessionCookie) {
     return undefined;
   }
 
-  return all.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
+  return `${sessionCookie.name}=${sessionCookie.value}`;
 }
 
 export default async function HomePage() {
@@ -23,19 +23,30 @@ export default async function HomePage() {
     redirect("/login");
   }
 
+  let currentUser: Awaited<ReturnType<typeof getMe>>;
   try {
-    await getMe(cookieHeader);
+    currentUser = await getMe(cookieHeader);
   } catch {
     redirect("/login");
   }
 
-  const [hosts, jobs, agents, auditLogs, latestMetrics] = await Promise.all([
+  const results = await Promise.allSettled([
     getHosts(cookieHeader),
     getJobs(cookieHeader),
     getAgents(cookieHeader),
     getAuditLogs(cookieHeader),
     getLatestMetrics(cookieHeader),
   ]);
+  const [hostsResult, jobsResult, agentsResult, auditLogsResult, metricsResult] = results;
+
+  const hosts = hostsResult.status === "fulfilled" ? hostsResult.value : [];
+  const jobs = jobsResult.status === "fulfilled" ? jobsResult.value : [];
+  const agents = agentsResult.status === "fulfilled" ? agentsResult.value : [];
+  const auditLogs = auditLogsResult.status === "fulfilled" ? auditLogsResult.value : [];
+  const latestMetrics = metricsResult.status === "fulfilled" ? metricsResult.value : [];
+  const initialError = results.some((result) => result.status === "rejected")
+    ? "Some dashboard data could not be loaded. Retrying automatically."
+    : null;
 
   return (
     <main className="container">
@@ -51,6 +62,8 @@ export default async function HomePage() {
       </div>
 
       <DashboardClient
+        currentUser={currentUser}
+        initialError={initialError}
         hosts={hosts}
         jobs={jobs}
         agents={agents}

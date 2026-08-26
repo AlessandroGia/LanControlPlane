@@ -1,6 +1,7 @@
+from sqlalchemy.orm import Session
+
 from lan_control_plane_server.db.models import AuditLog
 from lan_control_plane_server.repositories.audit_log_repository import AuditLogRepository
-from sqlalchemy.orm import Session
 
 
 class AuditService:

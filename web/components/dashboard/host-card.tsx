@@ -114,7 +114,7 @@ export function HostCard({
       >
         <div className="host-card-title-wrap">
           <div className="host-name">
-            <Link href={`/hosts/${host.name}`}>{host.name}</Link>
+            <Link href={`/hosts/${encodeURIComponent(host.name)}`}>{host.name}</Link>
           </div>
 
           <div className="host-card-submeta">

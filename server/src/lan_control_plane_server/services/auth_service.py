@@ -1,5 +1,8 @@
+from datetime import UTC, datetime, timedelta
+
 from sqlalchemy.orm import Session
 
+from lan_control_plane_server.core.config import get_settings
 from lan_control_plane_server.core.security import (
     generate_session_token,
     get_session_expiry,
@@ -48,7 +51,12 @@ class AuthService:
         if db_session is None:
             return None
 
-        self.session_repository.touch(db_session)
+        settings = get_settings()
+        last_seen_at = db_session.last_seen_at
+        if last_seen_at.tzinfo is None:
+            last_seen_at = last_seen_at.replace(tzinfo=UTC)
+        if datetime.now(UTC) - last_seen_at >= timedelta(seconds=settings.session_touch_interval_seconds):
+            self.session_repository.touch(db_session)
         return self.user_repository.get_by_id(db_session.user_id)
 
     def revoke_session_token(self, token: str) -> None:

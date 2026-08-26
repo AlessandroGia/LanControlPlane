@@ -1,9 +1,10 @@
-
 import os
 from functools import lru_cache
 from pathlib import Path
+from typing import Self
 
 from dotenv import load_dotenv
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,6 +31,7 @@ def _load_agent_env_file() -> Path | None:
 
     return None
 
+
 class AgentSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -37,11 +39,18 @@ class AgentSettings(BaseSettings):
         extra="ignore",
     )
 
-    agent_id: str = "desktop-casa"
-    agent_token: str = "change-me-agent-token"
+    agent_id: str = Field(default="desktop-casa", min_length=1, max_length=64, pattern=r"^[A-Za-z0-9._-]+$")
+    agent_token: str = Field(default="change-me-agent-token", min_length=16, max_length=512)
+    agent_enrollment_token: str | None = Field(default=None, min_length=16, max_length=512)
     server_ws_agent_url: str = "ws://server:8000/ws/agent"
-    ws_heartbeat_interval: int = 15
+    ws_heartbeat_interval: int = Field(default=15, ge=5, le=300)
     dry_run: bool = True
+
+    @model_validator(mode="after")
+    def reject_placeholder_live_credential(self) -> Self:
+        if not self.dry_run and self.agent_token == "change-me-agent-token":
+            raise ValueError("AGENT_TOKEN must be configured when DRY_RUN is false")
+        return self
 
 
 @lru_cache

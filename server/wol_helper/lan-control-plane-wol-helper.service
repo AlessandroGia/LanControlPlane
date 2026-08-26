@@ -6,11 +6,16 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=/opt/lan-control-plane-wol-helper
+EnvironmentFile=/etc/lan-control-plane-wol-helper.env
 ExecStart=/opt/lan-control-plane-wol-helper/.venv/bin/uvicorn app:app --host 0.0.0.0 --port 8099
 Restart=always
 RestartSec=5
-User=root
-Group=root
+DynamicUser=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+RestrictAddressFamilies=AF_INET AF_INET6
 
 [Install]
 WantedBy=multi-user.target

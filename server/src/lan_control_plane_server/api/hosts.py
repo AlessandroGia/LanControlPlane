@@ -1,14 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException
-from lan_control_plane_server.api.deps import require_api_key
+from fastapi import APIRouter, Depends, HTTPException, Query
+from lan_control_plane_shared.enums.host_state import HostState
+
+from lan_control_plane_server.api.deps import AdminUser, get_current_user_from_session
 from lan_control_plane_server.db.session import SessionLocal
 from lan_control_plane_server.schemas.host import HostNetworkUpdate, HostRead
 from lan_control_plane_server.schemas.metric import HostMetricRead
 from lan_control_plane_server.services.audit_service import AuditService
 from lan_control_plane_server.services.host_service import HostService
 from lan_control_plane_server.services.metric_service import HostMetricService
-from lan_control_plane_shared.enums.host_state import HostState
-from lan_control_plane_server.api.deps import get_current_user_from_session
-from lan_control_plane_server.db.models import User
 
 router = APIRouter(
     prefix="/hosts",
@@ -16,8 +15,9 @@ router = APIRouter(
     dependencies=[Depends(get_current_user_from_session)],
 )
 
+
 @router.get("", response_model=list[HostRead])
-async def get_hosts() -> list[HostRead]:
+def get_hosts() -> list[HostRead]:
     session = SessionLocal()
     try:
         host_service = HostService(session)
@@ -41,7 +41,7 @@ async def get_hosts() -> list[HostRead]:
 
 
 @router.get("/{name}", response_model=HostRead)
-async def get_host(name: str) -> HostRead:
+def get_host(name: str) -> HostRead:
     session = SessionLocal()
     try:
         host_service = HostService(session)
@@ -65,23 +65,38 @@ async def get_host(name: str) -> HostRead:
 
 
 @router.patch("/{name}/network", response_model=HostRead)
-async def update_host_network(name: str, payload: HostNetworkUpdate) -> HostRead:
+def update_host_network(
+    name: str,
+    payload: HostNetworkUpdate,
+    current_user: AdminUser,
+) -> HostRead:
     session = SessionLocal()
     try:
         host_service = HostService(session)
         audit_service = AuditService(session)
 
-        host = host_service.update_host_network_info(
-            name=name,
-            ip_address=str(payload.ip_address) if payload.ip_address is not None else None,
-            mac_address=payload.mac_address,
-        )
-        if host is None:
+        existing = host_service.get_host_by_name(name)
+        if existing is None:
             raise HTTPException(status_code=404, detail="Host not found")
 
+        ip_address = existing.ip_address
+        if "ip_address" in payload.model_fields_set:
+            ip_address = str(payload.ip_address) if payload.ip_address is not None else None
+
+        mac_address = existing.mac_address
+        if "mac_address" in payload.model_fields_set:
+            mac_address = payload.mac_address
+
+        host = host_service.update_host_network_info(
+            name=name,
+            ip_address=ip_address,
+            mac_address=mac_address,
+        )
+        assert host is not None
+
         audit_service.log_event(
-            actor_type="rest_api",
-            actor_id="admin",
+            actor_type="user",
+            actor_id=current_user.username,
             action="host_network_updated",
             target_type="host",
             target_id=host.name,
@@ -107,7 +122,10 @@ async def update_host_network(name: str, payload: HostNetworkUpdate) -> HostRead
 
 
 @router.get("/{name}/metrics", response_model=list[HostMetricRead])
-async def get_host_metrics(name: str, limit: int = 50) -> list[HostMetricRead]:
+def get_host_metrics(
+    name: str,
+    limit: int = Query(default=50, ge=1, le=500),
+) -> list[HostMetricRead]:
     session = SessionLocal()
     try:
         host_service = HostService(session)

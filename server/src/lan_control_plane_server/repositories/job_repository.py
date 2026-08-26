@@ -1,8 +1,9 @@
 from datetime import UTC, datetime
 
-from lan_control_plane_server.db.models import Job
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+
+from lan_control_plane_server.db.models import Job
 
 
 class JobRepository:
@@ -13,11 +14,13 @@ class JobRepository:
         self,
         *,
         host_id: str,
+        request_id: str | None,
         command: str,
         requested_by: str,
     ) -> Job:
         job = Job(
             host_id=host_id,
+            request_id=request_id,
             command=command,
             status="pending",
             requested_by=requested_by,
@@ -31,11 +34,17 @@ class JobRepository:
         statement = select(Job).where(Job.id == job_id)
         return self.session.scalar(statement)
 
-    def get_all(self) -> list[Job]:
-        statement = select(Job).order_by(Job.requested_at.desc())
+    def get_by_request_id(self, request_id: str) -> Job | None:
+        statement = select(Job).where(Job.request_id == request_id)
+        return self.session.scalar(statement)
+
+    def get_all(self, *, limit: int = 100) -> list[Job]:
+        statement = select(Job).order_by(Job.requested_at.desc()).limit(limit)
         return list(self.session.scalars(statement).all())
 
     def mark_running(self, job: Job) -> Job:
+        if job.status != "pending":
+            return job
         job.status = "running"
         job.started_at = datetime.now(UTC)
         self.session.add(job)
@@ -44,6 +53,8 @@ class JobRepository:
         return job
 
     def mark_completed(self, job: Job, result_message: str) -> Job:
+        if job.status not in {"pending", "running"}:
+            return job
         job.status = "completed"
         job.finished_at = datetime.now(UTC)
         job.result_message = result_message
@@ -53,6 +64,8 @@ class JobRepository:
         return job
 
     def mark_failed(self, job: Job, result_message: str) -> Job:
+        if job.status not in {"pending", "running"}:
+            return job
         job.status = "failed"
         job.finished_at = datetime.now(UTC)
         job.result_message = result_message

@@ -13,10 +13,11 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { HostCardSortable } from "@/components/dashboard/host-card-sortable";
 import type { Agent, Host, HostLatestMetric } from "@/lib/types";
+import { useHydrated } from "@/lib/use-hydrated";
 
 type HostListProps = {
   hosts: Host[];
@@ -74,7 +75,8 @@ export function HostList({
   actionsDisabled = false,
   pendingCommands = {},
 }: HostListProps) {
-  const [hostOrder, setHostOrder] = useState<string[]>([]);
+  const hydrated = useHydrated();
+  const [preferredOrder, setPreferredOrder] = useState<string[] | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -84,18 +86,10 @@ export function HostList({
     }),
   );
 
-  useEffect(() => {
-    const stored = loadStoredOrder();
-    setHostOrder(reconcileOrder(stored, hosts));
-  }, []);
-
-  useEffect(() => {
-    setHostOrder((current) => {
-      const next = reconcileOrder(current, hosts);
-      saveStoredOrder(next);
-      return next;
-    });
-  }, [hosts]);
+  const hostOrder = useMemo(
+    () => reconcileOrder(preferredOrder ?? (hydrated ? loadStoredOrder() : []), hosts),
+    [hosts, hydrated, preferredOrder],
+  );
 
   const orderedHosts = useMemo(() => {
     const hostMap = new Map(hosts.map((host) => [host.name, host]));
@@ -111,18 +105,16 @@ export function HostList({
       return;
     }
 
-    setHostOrder((current) => {
-      const oldIndex = current.indexOf(String(active.id));
-      const newIndex = current.indexOf(String(over.id));
+    const oldIndex = hostOrder.indexOf(String(active.id));
+    const newIndex = hostOrder.indexOf(String(over.id));
 
-      if (oldIndex === -1 || newIndex === -1) {
-        return current;
-      }
+    if (oldIndex === -1 || newIndex === -1) {
+      return;
+    }
 
-      const next = arrayMove(current, oldIndex, newIndex);
-      saveStoredOrder(next);
-      return next;
-    });
+    const next = arrayMove(hostOrder, oldIndex, newIndex);
+    saveStoredOrder(next);
+    setPreferredOrder(next);
   }
 
   if (orderedHosts.length === 0) {

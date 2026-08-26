@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import asyncio
 
-from lan_control_plane_agent.handlers.platform_commands import \
-    get_platform_commands
 from lan_control_plane_shared.enums.command import Command
+
+from lan_control_plane_agent.handlers.platform_commands import get_platform_commands
 
 
 async def handle_command(*, command: str, dry_run: bool) -> str:

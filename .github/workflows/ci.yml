@@ -40,10 +40,10 @@ jobs:
         run: uv sync --all-groups
 
       - name: Ruff lint
-        run: uv run ruff check src tests
+        run: uv run ruff check .
 
       - name: Ruff format check
-        run: uv run ruff format --check src tests
+        run: uv run ruff format --check .
 
       - name: Mypy
         run: uv run mypy src
@@ -78,10 +78,9 @@ jobs:
         run: |
           cat > .env <<'EOF'
           DATABASE_URL=sqlite:///./data/lan_control_plane.db
-          SESSION_COOKIE_NAME=lcp_session
-          SESSION_TTL_HOURS=12
           ACCESS_TOKEN_EXPIRE_MINUTES=60
-          AGENT_SHARED_SECRET=ci-agent-secret
+          AGENT_ENROLLMENT_TOKEN=ci-agent-enrollment-secret-long-enough
+          WOL_HELPER_TOKEN=ci-wol-helper-secret
           EOF
 
       - name: Prepare local sqlite path
@@ -89,6 +88,27 @@ jobs:
 
       - name: Run Alembic upgrade
         run: uv run alembic -c alembic.ini upgrade head
+
+      - name: Check model and migration consistency
+        run: uv run alembic -c alembic.ini check
+
+  web-quality:
+    name: Web quality and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      - run: npm run lint
+      - run: npm run build
 
   docker-build:
     name: Docker build

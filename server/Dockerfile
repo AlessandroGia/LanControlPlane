@@ -15,6 +15,7 @@ COPY server/uv.lock /app/server/uv.lock
 COPY server/src /app/server/src
 COPY server/alembic /app/server/alembic
 COPY server/alembic.ini /app/server/alembic.ini
+COPY server/scripts/docker-entrypoint.sh /app/server/docker-entrypoint.sh
 
 WORKDIR /app/server
 
@@ -32,6 +33,10 @@ COPY --from=builder /app/server/.venv /app/server/.venv
 COPY --from=builder /app/server/src /app/server/src
 COPY --from=builder /app/server/alembic /app/server/alembic
 COPY --from=builder /app/server/alembic.ini /app/server/alembic.ini
+COPY --from=builder /app/server/docker-entrypoint.sh /app/server/docker-entrypoint.sh
 COPY --from=builder /app/shared/src /app/shared/src
 
+RUN chmod +x /app/server/docker-entrypoint.sh
+
+ENTRYPOINT ["/app/server/docker-entrypoint.sh"]
 CMD ["uvicorn", "lan_control_plane_server.main:app", "--host", "0.0.0.0", "--port", "8000"]

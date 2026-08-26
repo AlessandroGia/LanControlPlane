@@ -1,21 +1,32 @@
 from __future__ import annotations
 
 import logging
+import os
+import secrets
 import socket
+from ipaddress import IPv4Address
 
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi import FastAPI, Header, HTTPException, status
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger("lan_control_plane_wol_helper")
 
 app = FastAPI()
+EXPECTED_TOKEN = os.getenv("WOL_HELPER_TOKEN", "")
 
 
 class WakeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", validate_default=True)
+
     mac_address: str
-    broadcast_ip: str = "10.10.10.255"
-    port: int = 9
+    broadcast_ip: IPv4Address = IPv4Address("255.255.255.255")
+    port: int = Field(default=9, ge=1, le=65535)
+
+    @field_validator("mac_address")
+    @classmethod
+    def validate_mac_address(cls, value: str) -> str:
+        return normalize_mac_address(value)
 
 
 def normalize_mac_address(mac_address: str) -> str:
@@ -59,15 +70,29 @@ def health() -> dict[str, str]:
 
 
 @app.post("/wake")
-def wake(request: WakeRequest) -> dict[str, str]:
+def wake(
+    request: WakeRequest,
+    x_wol_token: str | None = Header(default=None),
+) -> dict[str, str]:
+    if not EXPECTED_TOKEN:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="WOL helper token is not configured",
+        )
+    if x_wol_token is None or not secrets.compare_digest(x_wol_token, EXPECTED_TOKEN):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid WOL helper token",
+        )
+
     try:
         send_magic_packet(
             mac_address=request.mac_address,
-            broadcast_ip=request.broadcast_ip,
+            broadcast_ip=str(request.broadcast_ip),
             port=request.port,
         )
     except Exception as exc:
         LOGGER.exception("WOL helper failed: %s", exc)
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise HTTPException(status_code=500, detail="Unable to send magic packet") from exc
 
     return {"status": "ok", "message": "Magic packet sent"}

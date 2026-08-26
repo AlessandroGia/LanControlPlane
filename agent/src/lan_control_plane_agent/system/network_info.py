@@ -5,14 +5,14 @@ from typing import Final
 
 import psutil
 
-AF_LINK: Final[int] = getattr(psutil, "AF_LINK", object())
+AF_LINK: Final[int] = int(getattr(psutil, "AF_LINK", -1))
 
 
 def get_primary_ip_address() -> str | None:
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             sock.connect(("8.8.8.8", 80))
-            return sock.getsockname()[0]
+            return str(sock.getsockname()[0])
     except OSError:
         return None
 
@@ -24,7 +24,7 @@ def get_mac_address() -> str | None:
 
     addrs = psutil.net_if_addrs()
 
-    for interface_name, interface_addrs in addrs.items():
+    for _interface_name, interface_addrs in addrs.items():
         has_primary_ip = False
         mac_address = None
 
@@ -33,7 +33,7 @@ def get_mac_address() -> str | None:
                 has_primary_ip = True
 
             if addr.family == AF_LINK:
-                mac_address = addr.address
+                mac_address = str(addr.address)
 
         if has_primary_ip and mac_address:
             return mac_address

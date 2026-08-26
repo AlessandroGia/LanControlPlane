@@ -14,12 +14,25 @@ Write-Host "==> ScriptDir: $ScriptDir"
 Write-Host "==> AgentDir:  $AgentDir"
 Write-Host "==> RepoRoot:  $RepoRoot"
 
+& py -3.12 -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 12) else 1)"
+if ($LASTEXITCODE -ne 0) {
+    throw "Python 3.12 or newer is required."
+}
+
+New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
+
 Write-Host "==> Copying agent and shared"
 Remove-Item -Recurse -Force (Join-Path $InstallDir "agent") -ErrorAction SilentlyContinue
 Remove-Item -Recurse -Force (Join-Path $InstallDir "shared") -ErrorAction SilentlyContinue
 
-Copy-Item -Recurse -Force $AgentDir (Join-Path $InstallDir "agent")
-Copy-Item -Recurse -Force (Join-Path $RepoRoot "shared") (Join-Path $InstallDir "shared")
+$InstalledAgentDir = Join-Path $InstallDir "agent"
+$InstalledSharedDir = Join-Path $InstallDir "shared"
+New-Item -ItemType Directory -Force -Path $InstalledAgentDir, $InstalledSharedDir | Out-Null
+Copy-Item -Force (Join-Path $AgentDir "pyproject.toml") $InstalledAgentDir
+Copy-Item -Force (Join-Path $AgentDir "uv.lock") $InstalledAgentDir
+Copy-Item -Recurse -Force (Join-Path $AgentDir "src") (Join-Path $InstalledAgentDir "src")
+Copy-Item -Force (Join-Path $RepoRoot "shared\pyproject.toml") $InstalledSharedDir
+Copy-Item -Recurse -Force (Join-Path $RepoRoot "shared\src") (Join-Path $InstalledSharedDir "src")
 
 $LogsDir = "C:\ProgramData\LanControlPlaneAgent\logs"
 
@@ -37,7 +50,7 @@ if (-not (Test-Path (Join-Path $InstallDir "agent.env"))) {
 }
 
 Write-Host "==> Creating virtual environment"
-py -3 -m venv (Join-Path $InstallDir ".venv")
+py -3.12 -m venv (Join-Path $InstallDir ".venv")
 
 Write-Host "==> Installing uv"
 & (Join-Path $InstallDir ".venv\Scripts\pip.exe") install --no-cache-dir uv

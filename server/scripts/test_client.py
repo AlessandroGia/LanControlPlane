@@ -1,12 +1,15 @@
 import asyncio
+import getpass
 import json
 import os
 from typing import Any
+from uuid import uuid4
 
+import httpx
 import websockets
 
+SERVER_HTTP_URL = os.getenv("SERVER_HTTP_URL", "http://localhost:8000")
 SERVER_WS_CLIENT_URL = os.getenv("SERVER_WS_CLIENT_URL", "ws://localhost:8000/ws/client")
-CLIENT_TOKEN = os.getenv("CLIENT_TOKEN", "dev-client-token")
 
 
 async def receive_loop(websocket: websockets.ClientConnection) -> None:
@@ -17,68 +20,67 @@ async def receive_loop(websocket: websockets.ClientConnection) -> None:
         except json.JSONDecodeError:
             print(f"[RECV] raw: {message}")
             continue
-
-        print("[RECV]")
         print(json.dumps(payload, indent=2, ensure_ascii=False))
 
 
 async def input_loop(websocket: websockets.ClientConnection) -> None:
     loop = asyncio.get_running_loop()
-
     while True:
         raw = await loop.run_in_executor(
             None,
             input,
-            "\nComando (hosts / shutdown <host> / reboot <host> / wake <host> / quit): ",
+            "\nCommand (hosts / shutdown <host> / reboot <host> / wake <host> / quit): ",
         )
         raw = raw.strip()
-
         if not raw:
             continue
-
         if raw == "quit":
             await websocket.close()
             return
-
         if raw == "hosts":
             await websocket.send(json.dumps({"type": "get_hosts"}))
             continue
 
         parts = raw.split(maxsplit=1)
-        if len(parts) != 2:
-            print("Formato non valido.")
+        if len(parts) != 2 or parts[0] not in {"shutdown", "reboot", "wake"}:
+            print("Invalid command format.")
             continue
 
         command, host_id = parts
-        if command not in {"shutdown", "reboot", "wake"}:
-            print("Comando non supportato.")
-            continue
+        await websocket.send(
+            json.dumps(
+                {
+                    "type": "command_request",
+                    "request_id": str(uuid4()),
+                    "host_id": host_id,
+                    "command": command,
+                }
+            )
+        )
 
-        payload = {
-            "type": "command_request",
-            "request_id": f"req-{command}-{host_id}",
-            "host_id": host_id,
-            "command": command,
-        }
-        await websocket.send(json.dumps(payload))
+
+async def create_session_cookie() -> str:
+    username = os.getenv("LCP_USERNAME", "admin")
+    password = os.getenv("LCP_PASSWORD") or getpass.getpass("Password: ")
+    async with httpx.AsyncClient(base_url=SERVER_HTTP_URL) as client:
+        response = await client.post(
+            "/auth/login",
+            json={"username": username, "password": password},
+        )
+        response.raise_for_status()
+        token = client.cookies.get("lcp_session")
+        if token is None:
+            raise RuntimeError("Login response did not set a session cookie")
+        return token
 
 
 async def main() -> None:
-    async with websockets.connect(SERVER_WS_CLIENT_URL) as websocket:
-        initial_message = await websocket.recv()
-        print("[RECV]")
-        print(json.dumps(json.loads(initial_message), indent=2, ensure_ascii=False))
-
-        auth_payload = {
-            "type": "auth",
-            "token": CLIENT_TOKEN,
-        }
-        await websocket.send(json.dumps(auth_payload))
-
-        await asyncio.gather(
-            receive_loop(websocket),
-            input_loop(websocket),
-        )
+    session_token = await create_session_cookie()
+    async with websockets.connect(
+        SERVER_WS_CLIENT_URL,
+        additional_headers={"Cookie": f"lcp_session={session_token}"},
+    ) as websocket:
+        await asyncio.gather(receive_loop(websocket), input_loop(websocket))
 
 
 if __name__ == "__main__":

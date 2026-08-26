@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import desc, select
+from sqlalchemy import and_, delete, desc, func, select
 from sqlalchemy.orm import Session
 
 from lan_control_plane_server.db.models import Host, HostMetric
@@ -34,12 +34,15 @@ class HostMetricRepository:
         self.session.refresh(metric)
         return metric
 
-    def get_for_host(self, host_id: str, *, limit: int | None = None) -> list[HostMetric]:
-        statement = (
-            select(HostMetric)
-            .where(HostMetric.host_id == host_id)
-            .order_by(desc(HostMetric.collected_at))
+    def prune_for_host(self, host_id: str, *, before: datetime) -> None:
+        statement = delete(HostMetric).where(
+            HostMetric.host_id == host_id,
+            HostMetric.collected_at < before,
         )
+        self.session.execute(statement)
+
+    def get_for_host(self, host_id: str, *, limit: int | None = None) -> list[HostMetric]:
+        statement = select(HostMetric).where(HostMetric.host_id == host_id).order_by(desc(HostMetric.collected_at))
 
         if limit is not None:
             statement = statement.limit(limit)
@@ -48,20 +51,29 @@ class HostMetricRepository:
 
     def get_latest_for_host(self, host_id: str) -> HostMetric | None:
         statement = (
-            select(HostMetric)
-            .where(HostMetric.host_id == host_id)
-            .order_by(desc(HostMetric.collected_at))
-            .limit(1)
+            select(HostMetric).where(HostMetric.host_id == host_id).order_by(desc(HostMetric.collected_at)).limit(1)
         )
         return self.session.scalar(statement)
 
     def get_latest_for_all_hosts(self) -> list[tuple[Host, HostMetric]]:
-        hosts = list(self.session.scalars(select(Host)).all())
-        result: list[tuple[Host, HostMetric]] = []
-
-        for host in hosts:
-            latest = self.get_latest_for_host(host.id)
-            if latest is not None:
-                result.append((host, latest))
-
-        return result
+        latest_by_host = (
+            select(
+                HostMetric.host_id.label("host_id"),
+                func.max(HostMetric.collected_at).label("collected_at"),
+            )
+            .group_by(HostMetric.host_id)
+            .subquery()
+        )
+        statement = (
+            select(Host, HostMetric)
+            .join(latest_by_host, latest_by_host.c.host_id == Host.id)
+            .join(
+                HostMetric,
+                and_(
+                    HostMetric.host_id == latest_by_host.c.host_id,
+                    HostMetric.collected_at == latest_by_host.c.collected_at,
+                ),
+            )
+            .order_by(Host.name)
+        )
+        return [(host, metric) for host, metric in self.session.execute(statement).all()]

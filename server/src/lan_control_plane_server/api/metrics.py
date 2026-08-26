@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 from lan_control_plane_server.api.deps import get_current_user_from_session
 from lan_control_plane_server.db.session import SessionLocal
 from lan_control_plane_server.schemas.metric import HostLatestMetricRead
-from lan_control_plane_server.services.host_metric_service import HostMetricService
+from lan_control_plane_server.services.metric_service import HostMetricService
 
 router = APIRouter(
     prefix="/metrics",
@@ -13,7 +13,7 @@ router = APIRouter(
 
 
 @router.get("/latest", response_model=list[HostLatestMetricRead])
-async def get_latest_metrics() -> list[HostLatestMetricRead]:
+def get_latest_metrics() -> list[HostLatestMetricRead]:
     session = SessionLocal()
     try:
         metric_service = HostMetricService(session)

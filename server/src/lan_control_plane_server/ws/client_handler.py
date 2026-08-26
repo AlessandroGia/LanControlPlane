@@ -1,4 +1,11 @@
 from fastapi import WebSocket
+from lan_control_plane_shared.enums.command import Command
+from lan_control_plane_shared.enums.host_state import HostState
+from lan_control_plane_shared.enums.job_status import JobStatus
+from lan_control_plane_shared.protocol.client_messages import ClientCommandRequest, ClientGetHosts
+from lan_control_plane_shared.protocol.server_messages import CommandMessage, ErrorMessage, HostsSnapshot
+from pydantic import ValidationError
+
 from lan_control_plane_server.core.config import get_settings
 from lan_control_plane_server.db.session import SessionLocal
 from lan_control_plane_server.services.audit_service import AuditService
@@ -7,16 +14,6 @@ from lan_control_plane_server.services.job_service import JobService
 from lan_control_plane_server.services.wol_service import WakeOnLanService
 from lan_control_plane_server.utils.network import normalize_mac_address
 from lan_control_plane_server.ws.manager import manager
-from lan_control_plane_shared.enums.command import Command
-from lan_control_plane_shared.enums.host_state import HostState
-from lan_control_plane_shared.enums.job_status import JobStatus
-from lan_control_plane_shared.protocol.client_messages import (
-    ClientCommandRequest, ClientGetHosts)
-from lan_control_plane_shared.protocol.server_messages import (AuthOk,
-                                                               CommandMessage,
-                                                               ErrorMessage,
-                                                               HostsSnapshot)
-from pydantic import ValidationError
 
 
 async def _send_hosts_snapshot(websocket: WebSocket) -> None:
@@ -28,22 +25,22 @@ async def _send_hosts_snapshot(websocket: WebSocket) -> None:
     finally:
         session.close()
 
-async def register_client_connection(websocket: WebSocket, *, user_role: str) -> None:
-    await manager.connect_client(websocket)
-    await websocket.send_json(AuthOk(role=user_role).model_dump(mode="json"))
-    await _send_hosts_snapshot(websocket)
 
-
-async def handle_client_disconnect(websocket: WebSocket) -> None:
-    manager.disconnect_client(websocket)
+def register_client_connection(websocket: WebSocket) -> None:
+    manager.connect_client(websocket)
 
 
 async def handle_client_message(
     websocket: WebSocket,
-    raw_message: dict[str, object],
+    raw_message: object,
     *,
     requested_by: str,
+    user_role: str,
 ) -> None:
+    if not isinstance(raw_message, dict):
+        await websocket.send_json(ErrorMessage(message="Message must be a JSON object").model_dump(mode="json"))
+        return
+
     message_type = raw_message.get("type")
 
     if message_type == "get_hosts":
@@ -51,21 +48,20 @@ async def handle_client_message(
         return
 
     if message_type == "command_request":
+        if user_role != "admin":
+            await websocket.send_json(ErrorMessage(message="Administrator privileges required").model_dump(mode="json"))
+            return
         await _handle_command_request(websocket, raw_message, requested_by=requested_by)
         return
 
-    await websocket.send_json(
-        ErrorMessage(message=f"Unsupported message type: {message_type}").model_dump(mode="json")
-    )
+    await websocket.send_json(ErrorMessage(message=f"Unsupported message type: {message_type}").model_dump(mode="json"))
 
 
 async def _handle_get_hosts(websocket: WebSocket, raw_message: dict[str, object]) -> None:
     try:
         ClientGetHosts.model_validate(raw_message)
     except ValidationError:
-        await websocket.send_json(
-            ErrorMessage(message="Invalid get_hosts message").model_dump(mode="json")
-        )
+        await websocket.send_json(ErrorMessage(message="Invalid get_hosts message").model_dump(mode="json"))
         return
 
     await _send_hosts_snapshot(websocket)
@@ -80,15 +76,11 @@ async def _handle_command_request(
     try:
         command_request = ClientCommandRequest.model_validate(raw_message)
     except ValidationError:
-        await websocket.send_json(
-            ErrorMessage(message="Invalid command_request message").model_dump(mode="json")
-        )
+        await websocket.send_json(ErrorMessage(message="Invalid command_request message").model_dump(mode="json"))
         return
 
     if command_request.command not in {Command.SHUTDOWN, Command.REBOOT, Command.WAKE}:
-        await websocket.send_json(
-            ErrorMessage(message="Unsupported command").model_dump(mode="json")
-        )
+        await websocket.send_json(ErrorMessage(message="Unsupported command").model_dump(mode="json"))
         return
 
     session = SessionLocal()
@@ -99,13 +91,35 @@ async def _handle_command_request(
 
         host = host_service.get_host_by_name(command_request.host_id)
         if host is None:
+            await websocket.send_json(ErrorMessage(message="Host not found").model_dump(mode="json"))
+            return
+
+        existing_job = job_service.get_job_by_request_id(command_request.request_id)
+        if existing_job is not None:
+            if (
+                existing_job.host_id != host.id
+                or existing_job.command != command_request.command.value
+                or existing_job.requested_by != requested_by
+            ):
+                await websocket.send_json(
+                    ErrorMessage(message="Request ID is already used by a different command").model_dump(mode="json")
+                )
+                return
             await websocket.send_json(
-                ErrorMessage(message="Host not found").model_dump(mode="json")
+                {
+                    "type": "job_update",
+                    "job_id": existing_job.id,
+                    "status": existing_job.status,
+                    "host_id": host.name,
+                    "command": existing_job.command,
+                    "message": existing_job.result_message or "Duplicate request ignored",
+                }
             )
             return
 
         job = job_service.create_job(
             host_id=host.id,
+            request_id=command_request.request_id,
             command=command_request.command.value,
             requested_by=requested_by,
         )
@@ -164,14 +178,23 @@ async def _handle_agent_command(
     )
 
     if sent:
+        if command == Command.SHUTDOWN.value:
+            session = SessionLocal()
+            try:
+                HostService(session).mark_host_shutting_down(host_name)
+            finally:
+                session.close()
+            await manager.broadcast_host_status(host_name, HostState.SHUTTING_DOWN)
         return
 
     session = SessionLocal()
     try:
         job_service = JobService(session)
         audit_service = AuditService(session)
+        host_service = HostService(session)
 
         job_service.mark_job_failed(job_id, "Agent is offline or not connected")
+        host_service.mark_host_offline(host_name)
         audit_service.log_event(
             actor_type="system",
             actor_id="server",
@@ -194,6 +217,8 @@ async def _handle_agent_command(
         command=command,
         message="Agent is offline or not connected",
     )
+    await manager.broadcast_host_status(host_name, HostState.OFFLINE)
+
 
 async def _handle_wake_command(
     *,
@@ -238,18 +263,22 @@ async def _handle_wake_command(
         settings = get_settings()
         wol_service = WakeOnLanService(
             helper_base_url=settings.wol_helper_base_url,
-            broadcast_ip=settings.wol_broadcast_ip,
+            helper_token=settings.wol_helper_token,
+            broadcast_ip=str(settings.wol_broadcast_ip),
             port=settings.wol_port,
         )
         normalized_mac_address = normalize_mac_address(mac_address)
-        wol_service.send_magic_packet(normalized_mac_address)
+        if normalized_mac_address is None:
+            raise ValueError("Host has an invalid MAC address")
+        await wol_service.send_magic_packet(normalized_mac_address)
     except Exception as exc:
+        failure_message = "Wake-on-LAN helper request failed"
         session = SessionLocal()
         try:
             job_service = JobService(session)
             audit_service = AuditService(session)
 
-            job_service.mark_job_failed(job_id, f"WOL failed: {exc}")
+            job_service.mark_job_failed(job_id, failure_message)
             audit_service.log_event(
                 actor_type="system",
                 actor_id="server",
@@ -270,7 +299,7 @@ async def _handle_wake_command(
             status=JobStatus.FAILED,
             host_id=host_name,
             command=command,
-            message=f"WOL failed: {exc}",
+            message=failure_message,
         )
         return
 

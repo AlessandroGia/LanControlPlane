@@ -1,10 +1,9 @@
-from fastapi import APIRouter, Depends
-from lan_control_plane_server.api.deps import require_api_key
+from fastapi import APIRouter, Depends, Query
+
+from lan_control_plane_server.api.deps import get_current_user_from_session
 from lan_control_plane_server.db.session import SessionLocal
 from lan_control_plane_server.schemas.audit import AuditLogRead
 from lan_control_plane_server.services.audit_service import AuditService
-from lan_control_plane_server.api.deps import get_current_user_from_session
-from lan_control_plane_server.db.models import User
 
 router = APIRouter(
     prefix="/audit-logs",
@@ -14,7 +13,7 @@ router = APIRouter(
 
 
 @router.get("", response_model=list[AuditLogRead])
-async def get_audit_logs(limit: int = 100) -> list[AuditLogRead]:
+def get_audit_logs(limit: int = Query(default=100, ge=1, le=500)) -> list[AuditLogRead]:
     session = SessionLocal()
     try:
         audit_service = AuditService(session)

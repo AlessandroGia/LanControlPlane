@@ -35,6 +35,7 @@ services:
       - ./data:/app/server/data
       - ./alembic:/app/server/alembic
       - ./alembic.ini:/app/server/alembic.ini:ro
+    entrypoint: []
     command:
       - /app/server/.venv/bin/alembic
       - upgrade

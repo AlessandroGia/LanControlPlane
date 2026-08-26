@@ -1,11 +1,10 @@
-from fastapi import APIRouter, Depends
-from lan_control_plane_server.api.deps import require_api_key
+from fastapi import APIRouter, Depends, Query
+from lan_control_plane_shared.enums.job_status import JobStatus
+
+from lan_control_plane_server.api.deps import get_current_user_from_session
 from lan_control_plane_server.db.session import SessionLocal
 from lan_control_plane_server.schemas.job import JobRead
 from lan_control_plane_server.services.job_service import JobService
-from lan_control_plane_shared.enums.job_status import JobStatus
-from lan_control_plane_server.api.deps import get_current_user_from_session
-from lan_control_plane_server.db.models import User
 
 router = APIRouter(
     prefix="/jobs",
@@ -15,11 +14,11 @@ router = APIRouter(
 
 
 @router.get("", response_model=list[JobRead])
-async def get_jobs() -> list[JobRead]:
+def get_jobs(limit: int = Query(default=100, ge=1, le=500)) -> list[JobRead]:
     session = SessionLocal()
     try:
         job_service = JobService(session)
-        jobs = job_service.get_jobs()
+        jobs = job_service.get_jobs(limit=limit)
         return [
             JobRead(
                 id=job.id,

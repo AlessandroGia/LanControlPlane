@@ -1,24 +1,16 @@
-from fastapi import Cookie, Header, HTTPException, status
+from typing import Annotated
+
+from fastapi import Cookie, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from lan_control_plane_server.core.config import get_settings
+from lan_control_plane_server.db.models import User
 from lan_control_plane_server.db.session import SessionLocal
 from lan_control_plane_server.services.auth_service import AuthService
 
 
-async def require_api_key(x_api_key: str | None = Header(default=None)) -> None:
-    settings = get_settings()
-
-    if x_api_key != settings.rest_api_key:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or missing API key",
-        )
-
-
 def get_current_user_from_session(
     lcp_session: str | None = Cookie(default=None),
-):
+) -> User:
     if lcp_session is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -37,3 +29,18 @@ def get_current_user_from_session(
         return user
     finally:
         session.close()
+
+
+CurrentUser = Annotated[User, Depends(get_current_user_from_session)]
+
+
+def require_admin(current_user: CurrentUser) -> User:
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator privileges required",
+        )
+    return current_user
+
+
+AdminUser = Annotated[User, Depends(require_admin)]

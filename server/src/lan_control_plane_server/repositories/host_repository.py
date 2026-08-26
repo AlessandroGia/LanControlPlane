@@ -1,6 +1,7 @@
-from lan_control_plane_server.db.models import Host
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
+
+from lan_control_plane_server.db.models import Host
 
 
 class HostRepository:
@@ -18,6 +19,18 @@ class HostRepository:
     def get_by_name(self, name: str) -> Host | None:
         statement = select(Host).where(Host.name == name)
         return self.session.scalar(statement)
+
+    def mark_managed_hosts_offline(self) -> None:
+        statement = (
+            update(Host)
+            .where(
+                Host.is_managed.is_(True),
+                Host.state.in_(["online", "shutting_down"]),
+            )
+            .values(state="offline")
+        )
+        self.session.execute(statement)
+        self.session.commit()
 
     def create_managed_host(
         self,
@@ -40,6 +53,23 @@ class HostRepository:
         return host
 
     def update_state(self, host: Host, state: str) -> Host:
+        host.state = state
+        self.session.add(host)
+        self.session.commit()
+        self.session.refresh(host)
+        return host
+
+    def update_registration_info(
+        self,
+        host: Host,
+        *,
+        hostname: str,
+        ip_address: str | None,
+        state: str,
+    ) -> Host:
+        host.hostname = hostname
+        if ip_address is not None:
+            host.ip_address = ip_address
         host.state = state
         self.session.add(host)
         self.session.commit()

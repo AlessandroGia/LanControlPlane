@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.lancontrolplane.agent</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/lan-control-plane-agent/agent/.venv/bin/python</string>
+    <string>-m</string>
+    <string>lan_control_plane_agent.main</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/opt/lan-control-plane-agent/agent</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>AGENT_ENV_FILE</key>
+    <string>/opt/lan-control-plane-agent/agent.env</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/var/log/lan-control-plane-agent/agent.log</string>
+  <key>StandardErrorPath</key>
+  <string>/var/log/lan-control-plane-agent/agent-error.log</string>
+</dict>
+</plist>

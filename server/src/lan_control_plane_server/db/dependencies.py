@@ -1,7 +1,8 @@
 from collections.abc import Generator
 
-from lan_control_plane_server.db.session import SessionLocal
 from sqlalchemy.orm import Session
+
+from lan_control_plane_server.db.session import SessionLocal
 
 
 def get_db_session() -> Generator[Session, None, None]:

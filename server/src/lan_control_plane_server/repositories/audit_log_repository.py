@@ -1,8 +1,9 @@
 import json
 
-from lan_control_plane_server.db.models import AuditLog
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+
+from lan_control_plane_server.db.models import AuditLog
 
 
 class AuditLogRepository:
