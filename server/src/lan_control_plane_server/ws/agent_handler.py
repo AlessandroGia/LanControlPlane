@@ -31,7 +31,7 @@ async def register_agent_connection(websocket: WebSocket, hello: AgentHello) -> 
         audit_service = AuditService(session)
 
         # Authorization must happen before host state or network data is mutated.
-        agent_service.authorize_connection(
+        credential_rotated = agent_service.authorize_connection(
             host_name=agent_id,
             token=hello.token,
             enrollment_token=hello.enrollment_token,
@@ -70,6 +70,15 @@ async def register_agent_connection(websocket: WebSocket, hello: AgentHello) -> 
             token=hello.token,
             version=hello.version,
         )
+
+        if credential_rotated:
+            audit_service.log_event(
+                actor_type="agent",
+                actor_id=agent_id,
+                action="agent_credential_rotated",
+                target_type="host",
+                target_id=agent_id,
+            )
 
         audit_service.log_event(
             actor_type="agent",

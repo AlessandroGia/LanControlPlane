@@ -26,22 +26,38 @@ class AgentService:
         host_name: str,
         token: str,
         enrollment_token: str | None,
-    ) -> None:
+    ) -> bool:
         host = self.host_repository.get_by_name(host_name)
         existing = self.agent_repository.get_by_host_id(host.id) if host is not None else None
         if existing is None:
-            expected_enrollment_token = get_settings().agent_enrollment_token
-            if enrollment_token is None or not compare_digest(enrollment_token, expected_enrollment_token):
+            if not self._valid_enrollment_token(enrollment_token):
                 raise PermissionError("Invalid agent enrollment credentials")
             if self.agent_repository.get_by_token_hash(hash_token(token)) is not None:
                 raise PermissionError("Agent credential is already assigned to another host")
-            return
+            return False
 
         if not existing.enabled:
             raise PermissionError("Agent is disabled")
 
-        if not compare_digest(existing.token_hash, hash_token(token)):
+        candidate_hash = hash_token(token)
+        if compare_digest(existing.token_hash, candidate_hash):
+            return False
+
+        if not self._valid_enrollment_token(enrollment_token):
             raise PermissionError("Invalid agent credentials")
+        assigned_agent = self.agent_repository.get_by_token_hash(candidate_hash)
+        if assigned_agent is not None and assigned_agent.id != existing.id:
+            raise PermissionError("Agent credential is already assigned to another host")
+
+        self.agent_repository.update_token_hash(existing, token_hash=candidate_hash)
+        return True
+
+    @staticmethod
+    def _valid_enrollment_token(enrollment_token: str | None) -> bool:
+        return enrollment_token is not None and compare_digest(
+            enrollment_token,
+            get_settings().agent_enrollment_token,
+        )
 
     def register_or_update_agent(
         self,

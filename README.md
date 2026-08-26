@@ -25,7 +25,7 @@ The WOL helper requires `WOL_HELPER_TOKEN`. Use the same long random token in `s
 | `REST_API_KEY` | Removed. REST endpoints use the same authenticated user session and role checks. |
 | `SECRET_KEY` | Removed because it was not used by the previous implementation. Session tokens are random, stored as hashes, and do not require a signing key. |
 
-During migration, an already registered agent can continue using its existing `AGENT_TOKEN`. For new enrollments, configure the server's `AGENT_ENROLLMENT_TOKEN`, copy that enrollment value temporarily to the new agent, and generate a separate unique `AGENT_TOKEN` for that host.
+During migration, an already registered agent can continue using its existing `AGENT_TOKEN`. To replace an old shared credential, set a new unique `AGENT_TOKEN` and the server's `AGENT_ENROLLMENT_TOKEN` on that agent for one connection; the server rotates the stored credential, after which the enrollment token can be removed. For new enrollments, use the same one-time enrollment value and a separate unique `AGENT_TOKEN` for each host.
 
 ## Server setup
 

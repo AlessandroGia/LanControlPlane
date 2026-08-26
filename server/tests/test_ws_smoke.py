@@ -95,3 +95,61 @@ def test_agent_credential_cannot_be_reused_for_another_host(client):
         error = second_websocket.receive_json()
         assert error["type"] == "error"
         assert "another host" in error["message"]
+
+
+def test_registered_agent_can_rotate_credential_with_enrollment_token(client):
+    rotated_token = "rotated-agent-token-123456789"
+
+    with client.websocket_connect("/ws/agent") as websocket:
+        websocket.receive_json()
+        websocket.send_json(
+            {
+                "type": "hello",
+                "agent_id": "desktop-casa",
+                "token": TEST_AGENT_TOKEN,
+                "enrollment_token": TEST_AGENT_ENROLLMENT_TOKEN,
+                "hostname": "desktop-casa",
+                "version": "0.1.0",
+            }
+        )
+        assert websocket.receive_json()["type"] == "auth_ok"
+
+    with client.websocket_connect("/ws/agent") as websocket:
+        websocket.receive_json()
+        websocket.send_json(
+            {
+                "type": "hello",
+                "agent_id": "desktop-casa",
+                "token": rotated_token,
+                "enrollment_token": TEST_AGENT_ENROLLMENT_TOKEN,
+                "hostname": "desktop-casa",
+                "version": "0.1.0",
+            }
+        )
+        assert websocket.receive_json()["type"] == "auth_ok"
+
+    with client.websocket_connect("/ws/agent") as websocket:
+        websocket.receive_json()
+        websocket.send_json(
+            {
+                "type": "hello",
+                "agent_id": "desktop-casa",
+                "token": TEST_AGENT_TOKEN,
+                "hostname": "desktop-casa",
+                "version": "0.1.0",
+            }
+        )
+        assert websocket.receive_json()["type"] == "error"
+
+    with client.websocket_connect("/ws/agent") as websocket:
+        websocket.receive_json()
+        websocket.send_json(
+            {
+                "type": "hello",
+                "agent_id": "desktop-casa",
+                "token": rotated_token,
+                "hostname": "desktop-casa",
+                "version": "0.1.0",
+            }
+        )
+        assert websocket.receive_json()["type"] == "auth_ok"

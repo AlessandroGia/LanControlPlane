@@ -54,6 +54,13 @@ class AgentRepository:
         self.session.refresh(agent)
         return agent
 
+    def update_token_hash(self, agent: Agent, *, token_hash: str) -> Agent:
+        agent.token_hash = token_hash
+        self.session.add(agent)
+        self.session.commit()
+        self.session.refresh(agent)
+        return agent
+
     def touch_last_seen(self, agent: Agent) -> Agent:
         agent.last_seen_at = datetime.now(UTC)
         self.session.add(agent)

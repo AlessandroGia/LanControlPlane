@@ -11,6 +11,8 @@ services:
     working_dir: /app/server
     volumes:
       - ./data:/app/server/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 #    ports:
 #      - "8765:8000"
     networks:
