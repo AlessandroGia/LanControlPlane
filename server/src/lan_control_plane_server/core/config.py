@@ -2,7 +2,7 @@ from functools import lru_cache
 from ipaddress import IPv4Address
 from typing import Self
 
-from pydantic import Field, model_validator
+from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -27,7 +27,7 @@ class Settings(BaseSettings):
         default="change-me-agent-enrollment-token",
         min_length=16,
         max_length=512,
-        alias="AGENT_ENROLLMENT_TOKEN",
+        validation_alias=AliasChoices("AGENT_ENROLLMENT_TOKEN", "AGENT_TOKEN"),
     )
     wol_helper_base_url: str = Field(default="http://localhost:8099", alias="WOL_HELPER_BASE_URL")
     wol_helper_token: str = Field(

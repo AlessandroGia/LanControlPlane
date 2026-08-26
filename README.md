@@ -16,6 +16,17 @@ Dashboard users authenticate with an HTTP-only session cookie. Only users with t
 
 The WOL helper requires `WOL_HELPER_TOKEN`. Use the same long random token in `server/.env` and `server/wol_helper/.env` and restrict port 8099 to the server host with a firewall.
 
+### Environment migration
+
+| Previous server variable | Current configuration |
+| --- | --- |
+| `AGENT_TOKEN` | Rename to `AGENT_ENROLLMENT_TOKEN`. The old name remains accepted as a deprecated fallback on the server. Keep `AGENT_TOKEN` in each agent's `.env`, but give every agent a different value. |
+| `CLIENT_TOKEN` | Removed. Dashboard WebSockets authenticate with the `lcp_session` HTTP-only cookie created by `/auth/login`. |
+| `REST_API_KEY` | Removed. REST endpoints use the same authenticated user session and role checks. |
+| `SECRET_KEY` | Removed because it was not used by the previous implementation. Session tokens are random, stored as hashes, and do not require a signing key. |
+
+During migration, an already registered agent can continue using its existing `AGENT_TOKEN`. For new enrollments, configure the server's `AGENT_ENROLLMENT_TOKEN`, copy that enrollment value temporarily to the new agent, and generate a separate unique `AGENT_TOKEN` for that host.
+
 ## Server setup
 
 1. Copy `server/.env.example` to `server/.env` and configure the database, agent token, WOL helper URL/token, CORS origins, and cookie security.
