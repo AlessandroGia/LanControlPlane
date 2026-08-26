@@ -101,3 +101,18 @@ export async function getHostMetrics(
     headers: cookieHeader ? { Cookie: cookieHeader } : undefined,
   });
 }
+
+export async function deleteHost(hostName: string): Promise<void> {
+  const response = await fetch(
+    `${config.getApiBaseUrl()}/hosts/${encodeURIComponent(hostName)}`,
+    {
+      method: "DELETE",
+      credentials: "include",
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    throw new ApiError(response.status, response.statusText);
+  }
+}

@@ -26,6 +26,8 @@ type HostListProps = {
   onWake?: (hostName: string) => void;
   onShutdown?: (hostName: string) => void;
   onReboot?: (hostName: string) => void;
+  onDelete?: (hostName: string) => void;
+  canDelete?: boolean;
   actionsDisabled?: boolean;
   pendingCommands?: Record<string, "wake" | "shutdown" | "reboot" | undefined>;
 };
@@ -72,6 +74,8 @@ export function HostList({
   onWake,
   onShutdown,
   onReboot,
+  onDelete,
+  canDelete = false,
   actionsDisabled = false,
   pendingCommands = {},
 }: HostListProps) {
@@ -138,6 +142,8 @@ export function HostList({
                 onWake={onWake}
                 onShutdown={onShutdown}
                 onReboot={onReboot}
+                onDelete={onDelete}
+                canDelete={canDelete}
                 actionsDisabled={actionsDisabled}
                 pendingCommand={pendingCommands[host.name]}
               />

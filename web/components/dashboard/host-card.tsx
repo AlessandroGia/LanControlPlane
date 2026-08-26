@@ -14,6 +14,8 @@ type HostCardProps = {
   onWake?: (hostName: string) => void;
   onShutdown?: (hostName: string) => void;
   onReboot?: (hostName: string) => void;
+  onDelete?: (hostName: string) => void;
+  canDelete?: boolean;
   actionsDisabled?: boolean;
   pendingCommand?: "wake" | "shutdown" | "reboot";
   dragHandleProps?: {
@@ -68,6 +70,8 @@ export function HostCard({
   onWake,
   onShutdown,
   onReboot,
+  onDelete,
+  canDelete = false,
   actionsDisabled = false,
   pendingCommand,
   dragHandleProps,
@@ -178,6 +182,16 @@ export function HostCard({
         </div>
 
         <div className="host-card-actions-right">
+          {canDelete ? (
+            <button
+              className="host-action-button host-action-button-danger"
+              disabled={hostBusy || isOnline}
+              onClick={() => onDelete?.(host.name)}
+              title={isOnline ? "Disconnect the agent before removing this host" : "Remove stored host"}
+            >
+              Remove
+            </button>
+          ) : null}
           <button
             className="host-action-button host-action-button-primary"
             disabled={wakeDisabled}

@@ -8,6 +8,7 @@ from lan_control_plane_server.schemas.metric import HostMetricRead
 from lan_control_plane_server.services.audit_service import AuditService
 from lan_control_plane_server.services.host_service import HostService
 from lan_control_plane_server.services.metric_service import HostMetricService
+from lan_control_plane_server.ws.manager import manager
 
 router = APIRouter(
     prefix="/hosts",
@@ -116,6 +117,34 @@ def update_host_network(
             is_managed=host.is_managed,
             created_at=host.created_at,
             updated_at=host.updated_at,
+        )
+    finally:
+        session.close()
+
+
+@router.delete("/{name}", status_code=204)
+def delete_host(
+    name: str,
+    current_user: AdminUser,
+) -> None:
+    session = SessionLocal()
+    try:
+        host_service = HostService(session)
+        audit_service = AuditService(session)
+
+        host = host_service.get_host_by_name(name)
+        if host is None:
+            raise HTTPException(status_code=404, detail="Host not found")
+        if manager.has_agent(name):
+            raise HTTPException(status_code=409, detail="Disconnect the agent before deleting this host")
+
+        host_service.delete_host(host)
+        audit_service.log_event(
+            actor_type="user",
+            actor_id=current_user.username,
+            action="host_deleted",
+            target_type="host",
+            target_id=name,
         )
     finally:
         session.close()

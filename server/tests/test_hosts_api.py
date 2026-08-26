@@ -1,3 +1,5 @@
+from lan_control_plane_server.db.models import Agent, Host
+
 from .helpers import create_host
 
 
@@ -108,3 +110,43 @@ def test_patch_host_network_requires_admin(viewer_client, db_session):
         json={"ip_address": "192.168.1.21"},
     )
     assert response.status_code == 403
+
+
+def test_delete_host_removes_stale_host_and_agent(authenticated_client, db_session):
+    host = create_host(db_session, name="old-host", hostname="old-host", state="offline")
+    db_session.add(
+        Agent(
+            host_id=host.id,
+            token_hash="unused-test-token-hash",
+            version="0.1.0",
+            enabled=True,
+        )
+    )
+    db_session.commit()
+
+    response = authenticated_client.delete("/hosts/old-host")
+
+    assert response.status_code == 204
+    assert db_session.query(Host).filter_by(name="old-host").one_or_none() is None
+    assert db_session.query(Agent).filter_by(host_id=host.id).one_or_none() is None
+
+
+def test_delete_host_requires_admin(viewer_client, db_session):
+    create_host(db_session, name="old-host", hostname="old-host", state="offline")
+
+    response = viewer_client.delete("/hosts/old-host")
+
+    assert response.status_code == 403
+
+
+def test_delete_connected_host_is_rejected(authenticated_client, db_session, monkeypatch):
+    create_host(db_session, name="online-host", hostname="online-host", state="online")
+    monkeypatch.setattr(
+        "lan_control_plane_server.api.hosts.manager.has_agent",
+        lambda agent_id: agent_id == "online-host",
+    )
+
+    response = authenticated_client.delete("/hosts/online-host")
+
+    assert response.status_code == 409
+    assert db_session.query(Host).filter_by(name="online-host").one_or_none() is not None

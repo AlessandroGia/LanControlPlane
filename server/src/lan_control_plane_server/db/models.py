@@ -51,7 +51,11 @@ class Host(Base):
         nullable=False,
     )
 
-    agent: Mapped["Agent | None"] = relationship(back_populates="host", uselist=False)
+    agent: Mapped["Agent | None"] = relationship(
+        back_populates="host",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
     jobs: Mapped[list["Job"]] = relationship(back_populates="host", cascade="all, delete-orphan")
     metrics: Mapped[list["HostMetric"]] = relationship(
         back_populates="host",

@@ -25,7 +25,7 @@ class HostRepository:
             update(Host)
             .where(
                 Host.is_managed.is_(True),
-                Host.state.in_(["online", "shutting_down"]),
+                Host.state.in_(["online", "waking", "shutting_down"]),
             )
             .values(state="offline")
         )
@@ -89,3 +89,7 @@ class HostRepository:
         self.session.commit()
         self.session.refresh(host)
         return host
+
+    def delete(self, host: Host) -> None:
+        self.session.delete(host)
+        self.session.commit()

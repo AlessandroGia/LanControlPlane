@@ -82,6 +82,9 @@ class HostService:
             mac_address=mac_address,
         )
 
+    def delete_host(self, host: Host) -> None:
+        self.host_repository.delete(host)
+
     def get_hosts_snapshot(self) -> list[HostSnapshotItem]:
         hosts = self.host_repository.get_all()
         return [

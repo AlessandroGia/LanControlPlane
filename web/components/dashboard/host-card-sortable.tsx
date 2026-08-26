@@ -13,6 +13,8 @@ type HostCardSortableProps = {
     onWake?: (hostName: string) => void;
     onShutdown?: (hostName: string) => void;
     onReboot?: (hostName: string) => void;
+    onDelete?: (hostName: string) => void;
+    canDelete?: boolean;
     actionsDisabled?: boolean;
     pendingCommand?: "wake" | "shutdown" | "reboot";
 };
@@ -24,6 +26,8 @@ export function HostCardSortable({
     onWake,
     onShutdown,
     onReboot,
+    onDelete,
+    canDelete,
     actionsDisabled,
     pendingCommand,
 }: HostCardSortableProps) {
@@ -64,6 +68,8 @@ export function HostCardSortable({
                 onWake={onWake}
                 onShutdown={onShutdown}
                 onReboot={onReboot}
+                onDelete={onDelete}
+                canDelete={canDelete}
                 actionsDisabled={actionsDisabled}
                 pendingCommand={pendingCommand}
                 dragHandleProps={{

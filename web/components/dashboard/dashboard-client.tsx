@@ -9,7 +9,7 @@ import { DashboardSummary } from "@/components/dashboard/dashboard-summary";
 import { HostList } from "@/components/dashboard/host-list";
 import { JobsPanel } from "@/components/dashboard/jobs-panel";
 import { CollapsiblePanel } from "@/components/ui/collapsible-panel";
-import { getAgents, getAuditLogs, getHosts, getJobs, getLatestMetrics } from "@/lib/api";
+import { deleteHost, getAgents, getAuditLogs, getHosts, getJobs, getLatestMetrics } from "@/lib/api";
 import { isOlderThan } from "@/lib/time";
 import type { Agent, AuditLog, Host, HostLatestMetric, Job } from "@/lib/types";
 import { useHydrated } from "@/lib/use-hydrated";
@@ -57,6 +57,7 @@ export function DashboardClient({
         hostName: string;
         command: "shutdown" | "reboot";
     } | null>(null);
+    const [deleteConfirmation, setDeleteConfirmation] = useState<string | null>(null);
 
     const wsClientRef = useRef<ControlPlaneWsClient | null>(null);
 
@@ -323,6 +324,21 @@ export function DashboardClient({
         setConfirmation({ hostName, command: "reboot" });
     }
 
+    async function handleDeleteConfirmed(hostName: string): Promise<void> {
+        try {
+            await deleteHost(hostName);
+            setHosts((current) => current.filter((host) => host.name !== hostName));
+            setAgents((current) => current.filter((agent) => agent.host_name !== hostName));
+            setLatestMetrics((current) => current.filter((metric) => metric.host_name !== hostName));
+            setDeleteConfirmation(null);
+            setRefreshError(null);
+            void refreshFullData();
+        } catch (error) {
+            console.error("Failed to remove host", error);
+            setRefreshError("Unable to remove this host. Disconnect its agent and try again.");
+        }
+    }
+
     const filteredHosts = useMemo(() => {
         const normalizedSearch = search.trim().toLowerCase();
 
@@ -411,6 +427,8 @@ export function DashboardClient({
                         onWake={handleWake}
                         onShutdown={handleShutdown}
                         onReboot={handleReboot}
+                        onDelete={setDeleteConfirmation}
+                        canDelete={currentUser.role === "admin"}
                         actionsDisabled={actionsDisabled}
                         pendingCommands={pendingCommands}
                     />
@@ -453,6 +471,35 @@ export function DashboardClient({
                                 }}
                             >
                                 Confirm {confirmation.command}
+                            </button>
+                        </div>
+                    </section>
+                </div>
+            ) : null}
+
+            {deleteConfirmation ? (
+                <div className="confirmation-backdrop" role="presentation">
+                    <section
+                        className="confirmation-dialog"
+                        role="alertdialog"
+                        aria-modal="true"
+                        aria-labelledby="delete-confirmation-title"
+                    >
+                        <h2 id="delete-confirmation-title">Remove host</h2>
+                        <p>
+                            Permanently remove <strong>{deleteConfirmation}</strong> and its stored
+                            agent, jobs, and metrics? Audit history is retained.
+                        </p>
+                        <div className="confirmation-actions">
+                            <button type="button" onClick={() => setDeleteConfirmation(null)}>
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="danger-confirm-button"
+                                onClick={() => void handleDeleteConfirmed(deleteConfirmation)}
+                            >
+                                Remove host
                             </button>
                         </div>
                     </section>
