@@ -11,10 +11,16 @@ services:
     working_dir: /app/server
     volumes:
       - ./data:/app/server/data
-    ports:
-      - "8765:8000"
+#    ports:
+#      - "8765:8000"
     networks:
-      - private-net
+      - rp-admin
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+        compress: "true"
 
   migrate:
     image: lan-control-plane-server:local
@@ -34,9 +40,15 @@ services:
       - upgrade
       - head
     networks:
-      - private-net
+      - rp-admin
     profiles:
       - tools
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+        compress: "true"
 
   create-admin:
     image: lan-control-plane-server:local
@@ -54,9 +66,15 @@ services:
       - /app/server/.venv/bin/python
       - /app/server/scripts/create_admin.py
     networks:
-      - private-net
+      - rp-admin
     profiles:
       - tools
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+        compress: "true"
 
   makemigrations:
     image: lan-control-plane-server:local
@@ -80,10 +98,16 @@ services:
       - -m
       - update schema
     networks:
-      - private-net
+      - rp-admin
     profiles:
       - tools
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+        compress: "true"
 
 networks:
-  private-net:
+  rp-admin:
     external: true

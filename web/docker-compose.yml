@@ -11,10 +11,16 @@ services:
     command: npm run start
     networks:
       - public-net
-      - private-net
+      - rp-admin
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+        compress: "true"
 
 networks:
   public-net:
     external: true
-  private-net:
+  rp-admin:
     external: true
